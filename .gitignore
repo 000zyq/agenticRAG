@@ -1,0 +1,10 @@
+.DS_Store
+.env
+*.pyc
+*.bin
+**xl.meta
+**part.1
+docker/**/*
+
+**/node_modules/*
+frontend/.next/*/*
