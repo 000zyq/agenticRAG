@@ -1,0 +1,30 @@
+version: 1
+metrics:
+  - id: evidence_link_rate
+    description: Fraction of extracted cells that can be traced to a page and row.
+    threshold: 1.0
+    scope: report
+  - id: required_field_presence
+    description: Presence rate for currency, units, period_end, and report_type in metadata.
+    threshold: 0.98
+    scope: report
+  - id: table_extraction_success_rate
+    description: Fraction of reports where at least one financial statement table is detected.
+    threshold: 0.90
+    scope: dataset
+  - id: column_alignment_accuracy
+    description: Fraction of rows where numeric cell count matches inferred column count.
+    threshold: 0.95
+    scope: table
+  - id: unit_currency_detection_rate
+    description: Fraction of tables with detected currency and units.
+    threshold: 0.95
+    scope: table
+  - id: period_detection_rate
+    description: Fraction of reports with period_end detected.
+    threshold: 0.95
+    scope: report
+  - id: integrity_checks_pass_rate
+    description: Pass rate for accounting integrity checks (assets=liabilities+equity, cashflow ties).
+    threshold: 0.98
+    scope: report

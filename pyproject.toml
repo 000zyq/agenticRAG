@@ -28,6 +28,11 @@ dependencies = [
   "ag-ui-protocol>=0.1.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+]
+
 [tool.uv]
 managed = true
 

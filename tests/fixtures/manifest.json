@@ -1,0 +1,10 @@
+{
+  "reports": [
+    {
+      "name": "2024年报",
+      "path": "tmp/ingest/2024年报.pdf",
+      "type": "annual",
+      "year": 2024
+    }
+  ]
+}

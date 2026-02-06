@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import os
@@ -51,6 +51,7 @@ class TableCell:
 class TableRow:
     label: str
     cells: list[TableCell]
+    page_number: int | None = None
 
 
 @dataclass
@@ -254,13 +255,13 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
 
         columns = _guess_column_labels(current_header, max_cols)
         table_rows: list[TableRow] = []
-        for (_, line), cells in zip(current_rows, rows_cells):
+        for (row_page, line), cells in zip(current_rows, rows_cells):
             label = _strip_numbers(line)
             if not label:
                 label = "(blank)"
             if len(cells) < max_cols:
                 cells = [TableCell(value=None, raw_text=None)] * (max_cols - len(cells)) + cells
-            table_rows.append(TableRow(label=label, cells=cells))
+            table_rows.append(TableRow(label=label, cells=cells, page_number=row_page))
 
         header_text = " ".join(current_header)
         statement_type = _detect_statement_type(header_text)
