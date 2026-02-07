@@ -1,0 +1,3 @@
+status: open
+goal: ensure step execution status is reflected in UI immediately with part of doc chunks
+metric: status_delay_to_ui

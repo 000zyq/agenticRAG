@@ -1,0 +1,48 @@
+status: in_progress_by_codex
+goal: extract facts from pdf and store into postgres. Ensure correct values from tables are parsed and stored. 
+metric: 
+1️⃣ 字段级准确率（最重要）:
+定义: 结构化字段是否正确
+field_accuracy = 正确字段数 / 总字段数
+营收 = 123亿 ✔
+净利润 = 23亿 ✔
+毛利率 = 错 ✘
+
+
+2️⃣ 单个表格字段完整率（财报核心指标）
+定义: 一个表格是否完整抽取
+table_completeness = 抽到字段 / 应有字段
+
+应有字段: 10
+抽到字段: 9
+
+
+3. 表格个数完整率（财报核心指标）
+定义: 所有表格是否被抽取
+
+table_success_rate = 完整表格数 / 总表格数
+应有表格: 10
+抽到表格: 9
+
+4. 数值正确率（必须单独算）
+numeric_accuracy
+= 正确数值 / 总数值
+
+5. 勾稽关系正确率（高阶但强烈建议）
+consistency_score
+= 勾稽成立数 / 总勾稽关系数
+
+比如
+资产 = 负债 + 所有者权益
+净利润 = 营收 - 成本
+
+6. 文档成功率（工程指标）
+doc_success_rate
+= 成功文档数 / 总文档数
+
+7. 单pdf处理时间
+p95_parse_time
+
+
+8. 单pdf成本
+cost_per_pdf

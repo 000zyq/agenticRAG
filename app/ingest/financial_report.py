@@ -30,7 +30,7 @@ UNIT_PATTERNS = [
 ]
 
 NUMBER_RE = re.compile(r"(?<![\w.%])[\(]?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?[\)]?(?![\w.%])")
-DATE_RE = re.compile(r"(20\d{2})[年\-/](\d{1,2})[月\-/](\d{1,2})")
+DATE_RE = re.compile(r"(20\d{2})\s*[年\-/]\s*(\d{1,2})\s*[月\-/]\s*(\d{1,2})")
 YEAR_RE = re.compile(r"(20\d{2})")
 
 
@@ -234,6 +234,7 @@ def _guess_column_labels(header_lines: list[str], num_cols: int) -> list[TableCo
 def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
     blocks: list[TableBlock] = []
     header_buffer: list[tuple[int, str]] = []
+    last_statement_header: tuple[int, str] | None = None
 
     current_rows: list[tuple[int, str]] = []
     current_header: list[str] = []
@@ -298,11 +299,22 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
                     flush_current()
                 continue
 
+            if _detect_statement_type(line):
+                last_statement_header = (page.page, line)
+
             cells = _extract_numbers(line)
-            is_row = len(cells) >= 1 and bool(_strip_numbers(line))
+            has_label = bool(_strip_numbers(line))
+            if not current_rows:
+                is_row = len(cells) >= 2 and has_label
+            else:
+                is_row = len(cells) >= 1 and has_label
             if is_row:
                 if not current_rows:
                     current_header = [text for _, text in header_buffer]
+                    if not _detect_statement_type(" ".join(current_header)) and last_statement_header:
+                        if page.page - last_statement_header[0] <= 1:
+                            if last_statement_header[1] not in current_header:
+                                current_header = [last_statement_header[1]] + current_header
                     current_page_start = page.page
                 current_rows.append((page.page, line))
                 current_page_end = page.page
@@ -350,6 +362,8 @@ def _extract_metadata(pages: list[PageContent]) -> ReportMeta:
     date_match = _parse_date_from_text(head_text)
     if date_match:
         period_end = date_match
+    elif fiscal_year and report_type == "annual":
+        period_end = date(fiscal_year, 12, 31)
 
     extra = {"raw_head": head_text[:2000]}
     return ReportMeta(

@@ -1,0 +1,11 @@
+task: improve_pdf2db
+changes:
+- centralized metric mapping in app/ingest/metric_defs.py
+- expanded metric dictionary for income/balance/cashflow
+- added core_metric_match_rate to eval metrics
+metrics_before:
+- core_metric_match_rate: 0.0155
+metrics_after:
+- core_metric_match_rate: 0.0825
+next_step:
+- backfill existing reports with --recompute-facts to populate readable metric codes
