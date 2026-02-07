@@ -213,7 +213,120 @@ def _consolidation_scope(is_consolidated: bool | None) -> str | None:
     return None
 
 
-def insert_report(path: Path) -> int:
+def _insert_facts_for_table(
+    cur,
+    report_id: int,
+    meta,
+    table,
+    table_id: int | None,
+    row_ids: list[int] | None,
+    now: datetime,
+    metric_cache: dict[str, int],
+) -> tuple[int, int]:
+    mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
+    if not mapped_statement:
+        return 0, 0
+
+    flow_fact_count = 0
+    stock_fact_count = 0
+    table_currency = table.currency or meta.currency
+    table_units = table.units or meta.units
+    consolidation_scope = _consolidation_scope(table.is_consolidated)
+
+    for row_idx, row in enumerate(table.rows):
+        metric_def = _match_metric(row.label, mapped_statement)
+        metric_id = _get_or_create_metric(
+            cur,
+            metric_def,
+            row.label,
+            mapped_statement,
+            table_units,
+            now,
+            metric_cache,
+        )
+        row_id = row_ids[row_idx] if row_ids else None
+        for col, cell in zip(table.columns, row.cells):
+            if cell.value is None:
+                continue
+            period_end = _infer_period_end(col, meta)
+            period_start = _infer_period_start(meta.report_type, period_end)
+
+            cur.execute(
+                """
+                INSERT INTO source_trace (
+                    report_id, source_table_id, source_row_id, source_page,
+                    raw_label, raw_value, column_label, extra, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING trace_id
+                """,
+                (
+                    report_id,
+                    table_id,
+                    row_id,
+                    row.page_number,
+                    row.label,
+                    cell.raw_text,
+                    col.label,
+                    None,
+                    now,
+                ),
+            )
+            trace_id = int(cur.fetchone()[0])
+
+            if mapped_statement == "balance":
+                cur.execute(
+                    """
+                    INSERT INTO financial_stock_fact (
+                        report_id, metric_id, as_of_date, value, unit, currency,
+                        consolidation_scope, source_trace_id, quality_score, created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        report_id,
+                        metric_id,
+                        period_end,
+                        cell.value,
+                        table_units,
+                        table_currency,
+                        consolidation_scope,
+                        trace_id,
+                        None,
+                        now,
+                    ),
+                )
+                stock_fact_count += 1
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO financial_flow_fact (
+                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                        consolidation_scope, audit_flag, source_trace_id, quality_score, created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        report_id,
+                        metric_id,
+                        period_start,
+                        period_end,
+                        cell.value,
+                        table_units,
+                        table_currency,
+                        consolidation_scope,
+                        None,
+                        trace_id,
+                        None,
+                        now,
+                    ),
+                )
+                flow_fact_count += 1
+
+    return flow_fact_count, stock_fact_count
+
+
+def insert_report(path: Path, recompute_facts: bool = False) -> int:
     source_hash = sha256_file(path)
     now = datetime.utcnow()
 
@@ -239,15 +352,69 @@ def insert_report(path: Path) -> int:
                 existing = cur.fetchone()
                 if existing:
                     report_id = int(existing[0])
+                    if not recompute_facts:
+                        cur.execute(
+                            """
+                            INSERT INTO report_versions (
+                                report_id, parse_method, parser_version, started_at, finished_at, status, summary_json
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (report_id, parse_method, "v1", now, now, "skipped", json.dumps({"reason": "duplicate"})),
+                        )
+                        conn.commit()
+                        return report_id
+
                     cur.execute(
                         """
                         INSERT INTO report_versions (
-                            report_id, parse_method, parser_version, started_at, finished_at, status, summary_json
+                            report_id, parse_method, parser_version, started_at, status
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING version_id
                         """,
-                        (report_id, parse_method, "v1", now, now, "skipped", json.dumps({"reason": "duplicate"})),
+                        (report_id, parse_method, "v1", now, "running"),
                     )
+                    version_id = int(cur.fetchone()[0])
+
+                    stage = "recompute_facts_cleanup"
+                    cur.execute("DELETE FROM financial_flow_fact WHERE report_id = %s", (report_id,))
+                    cur.execute("DELETE FROM financial_stock_fact WHERE report_id = %s", (report_id,))
+                    cur.execute("DELETE FROM source_trace WHERE report_id = %s", (report_id,))
+
+                    stage = "recompute_facts_insert"
+                    metric_cache: dict[str, int] = {}
+                    flow_fact_count = 0
+                    stock_fact_count = 0
+                    for table in tables:
+                        flow_inc, stock_inc = _insert_facts_for_table(
+                            cur,
+                            report_id,
+                            meta,
+                            table,
+                            None,
+                            None,
+                            now,
+                            metric_cache,
+                        )
+                        flow_fact_count += flow_inc
+                        stock_fact_count += stock_inc
+
+                    finished = datetime.utcnow()
+                    summary = {
+                        "flow_facts": flow_fact_count,
+                        "stock_facts": stock_fact_count,
+                        "mode": "recompute_facts",
+                    }
+                    cur.execute(
+                        """
+                        UPDATE report_versions
+                        SET finished_at = %s, status = %s, summary_json = %s
+                        WHERE version_id = %s
+                        """,
+                        (finished, "ready", json.dumps(summary), version_id),
+                    )
+
                     conn.commit()
                     return report_id
 
@@ -419,103 +586,19 @@ def insert_report(path: Path) -> int:
                                 (row_id, col_id, cell.value, cell.raw_text, table_units, None, now),
                             )
 
-                    mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
-                    if not mapped_statement:
-                        continue
-
                     stage = "insert_facts"
-                    column_entries = list(zip(column_ids, table.columns))
-                    row_entries = list(zip(row_ids, table.rows))
-                    for row_id, row in row_entries:
-                        metric_def = _match_metric(row.label, mapped_statement)
-                        metric_id = _get_or_create_metric(
-                            cur,
-                            metric_def,
-                            row.label,
-                            mapped_statement,
-                            table_units,
-                            now,
-                            metric_cache,
-                        )
-                        for col_idx, (col_id, col) in enumerate(column_entries):
-                            cell = row.cells[col_idx]
-                            if cell.value is None:
-                                continue
-                            period_end = _infer_period_end(col, meta)
-                            period_start = _infer_period_start(meta.report_type, period_end)
-                            consolidation_scope = _consolidation_scope(table.is_consolidated)
-
-                            cur.execute(
-                                """
-                                INSERT INTO source_trace (
-                                    report_id, source_table_id, source_row_id, source_page,
-                                    raw_label, raw_value, column_label, extra, created_at
-                                )
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                RETURNING trace_id
-                                """,
-                                (
-                                    report_id,
-                                    table_id,
-                                    row_id,
-                                    row.page_number,
-                                    row.label,
-                                    cell.raw_text,
-                                    col.label,
-                                    None,
-                                    now,
-                                ),
-                            )
-                            trace_id = int(cur.fetchone()[0])
-
-                            if mapped_statement == "balance":
-                                cur.execute(
-                                    """
-                                    INSERT INTO financial_stock_fact (
-                                        report_id, metric_id, as_of_date, value, unit, currency,
-                                        consolidation_scope, source_trace_id, quality_score, created_at
-                                    )
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """,
-                                    (
-                                        report_id,
-                                        metric_id,
-                                        period_end,
-                                        cell.value,
-                                        table_units,
-                                        table_currency,
-                                        consolidation_scope,
-                                        trace_id,
-                                        None,
-                                        now,
-                                    ),
-                                )
-                                stock_fact_count += 1
-                            else:
-                                cur.execute(
-                                    """
-                                    INSERT INTO financial_flow_fact (
-                                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
-                                        consolidation_scope, audit_flag, source_trace_id, quality_score, created_at
-                                    )
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """,
-                                    (
-                                        report_id,
-                                        metric_id,
-                                        period_start,
-                                        period_end,
-                                        cell.value,
-                                        table_units,
-                                        table_currency,
-                                        consolidation_scope,
-                                        None,
-                                        trace_id,
-                                        None,
-                                        now,
-                                    ),
-                                )
-                                flow_fact_count += 1
+                    flow_inc, stock_inc = _insert_facts_for_table(
+                        cur,
+                        report_id,
+                        meta,
+                        table,
+                        table_id,
+                        row_ids,
+                        now,
+                        metric_cache,
+                    )
+                    flow_fact_count += flow_inc
+                    stock_fact_count += stock_inc
 
                 finished = datetime.utcnow()
                 summary = {
@@ -556,13 +639,14 @@ def insert_report(path: Path) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest financial report PDF into Postgres.")
     parser.add_argument("path", nargs="?", default="tmp/ingest/2024年报.pdf", help="Path to report PDF")
+    parser.add_argument("--recompute-facts", action="store_true", help="Recompute facts for existing report")
     args = parser.parse_args()
 
     path = Path(args.path)
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
 
-    report_id = insert_report(path)
+    report_id = insert_report(path, recompute_facts=args.recompute_facts)
     print(f"report_id={report_id}")
 
 
