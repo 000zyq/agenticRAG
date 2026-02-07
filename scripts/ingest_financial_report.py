@@ -165,6 +165,7 @@ def _consolidation_scope(is_consolidated: bool | None) -> str | None:
 def _insert_facts_for_table(
     cur,
     report_id: int,
+    version_id: int | None,
     meta,
     table,
     table_id: int | None,
@@ -228,11 +229,36 @@ def _insert_facts_for_table(
             if mapped_statement == "balance":
                 cur.execute(
                     """
-                    INSERT INTO financial_stock_fact (
-                        report_id, metric_id, as_of_date, value, unit, currency,
+                    INSERT INTO financial_stock_candidate (
+                        report_id, version_id, metric_id, as_of_date, value, unit, currency,
                         consolidation_scope, source_trace_id, quality_score, created_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING candidate_id
+                    """,
+                    (
+                        report_id,
+                        version_id,
+                        metric_id,
+                        period_end,
+                        cell.value,
+                        table_units,
+                        table_currency,
+                        consolidation_scope,
+                        trace_id,
+                        None,
+                        now,
+                    ),
+                )
+                candidate_id = int(cur.fetchone()[0])
+                cur.execute(
+                    """
+                    INSERT INTO financial_stock_fact (
+                        report_id, metric_id, as_of_date, value, unit, currency,
+                        consolidation_scope, source_trace_id, quality_score, created_at,
+                        selected_candidate_id, resolution_status, resolution_method
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         report_id,
@@ -245,17 +271,47 @@ def _insert_facts_for_table(
                         trace_id,
                         None,
                         now,
+                        candidate_id,
+                        "auto",
+                        "single_engine",
                     ),
                 )
                 stock_fact_count += 1
             else:
                 cur.execute(
                     """
-                    INSERT INTO financial_flow_fact (
-                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                    INSERT INTO financial_flow_candidate (
+                        report_id, version_id, metric_id, period_start_date, period_end_date, value, unit, currency,
                         consolidation_scope, audit_flag, source_trace_id, quality_score, created_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING candidate_id
+                    """,
+                    (
+                        report_id,
+                        version_id,
+                        metric_id,
+                        period_start,
+                        period_end,
+                        cell.value,
+                        table_units,
+                        table_currency,
+                        consolidation_scope,
+                        None,
+                        trace_id,
+                        None,
+                        now,
+                    ),
+                )
+                candidate_id = int(cur.fetchone()[0])
+                cur.execute(
+                    """
+                    INSERT INTO financial_flow_fact (
+                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                        consolidation_scope, audit_flag, source_trace_id, quality_score, created_at,
+                        selected_candidate_id, resolution_status, resolution_method
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         report_id,
@@ -270,6 +326,9 @@ def _insert_facts_for_table(
                         trace_id,
                         None,
                         now,
+                        candidate_id,
+                        "auto",
+                        "single_engine",
                     ),
                 )
                 flow_fact_count += 1
@@ -331,6 +390,8 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                     stage = "recompute_facts_cleanup"
                     cur.execute("DELETE FROM financial_flow_fact WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM financial_stock_fact WHERE report_id = %s", (report_id,))
+                    cur.execute("DELETE FROM financial_flow_candidate WHERE report_id = %s", (report_id,))
+                    cur.execute("DELETE FROM financial_stock_candidate WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM source_trace WHERE report_id = %s", (report_id,))
 
                     stage = "recompute_facts_insert"
@@ -347,6 +408,7 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                         flow_inc, stock_inc = _insert_facts_for_table(
                             cur,
                             report_id,
+                            version_id,
                             meta,
                             table,
                             table_id,
@@ -547,6 +609,7 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                     flow_inc, stock_inc = _insert_facts_for_table(
                         cur,
                         report_id,
+                        version_id,
                         meta,
                         table,
                         table_id,
