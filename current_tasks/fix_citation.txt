@@ -1,0 +1,4 @@
+status: in_progress_by_codex
+locked_at: 2026-02-07
+goal: ensure every claim has citation
+metric: citation_score

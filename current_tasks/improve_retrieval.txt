@@ -1,0 +1,3 @@
+status: open
+goal: improve top5 retrieval accuracy
+metric: hits@top5

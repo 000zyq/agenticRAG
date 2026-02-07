@@ -52,6 +52,7 @@ STATEMENT_TYPE_MAP = {
     "cash_flow": "cashflow",
 }
 
+
 def _match_metric(label: str, statement_type: str) -> dict | None:
     return match_metric(label, statement_type)
 
@@ -110,6 +111,29 @@ def _get_or_create_metric(cur, metric: dict, label: str, statement_type: str, un
     metric_id = int(cur.fetchone()[0])
     cache[metric_code] = metric_id
     return metric_id
+
+
+def _load_existing_table_row_map(cur, report_id: int) -> tuple[list[int], dict[int, dict[int, int]]]:
+    cur.execute(
+        "SELECT table_id FROM report_tables WHERE report_id = %s ORDER BY table_id",
+        (report_id,),
+    )
+    table_ids = [int(row[0]) for row in cur.fetchall()]
+    if not table_ids:
+        return [], {}
+    cur.execute(
+        """
+        SELECT table_id, row_index, row_id
+        FROM report_table_rows
+        WHERE table_id = ANY(%s)
+        ORDER BY table_id, row_index
+        """,
+        (table_ids,),
+    )
+    row_map: dict[int, dict[int, int]] = {}
+    for table_id, row_index, row_id in cur.fetchall():
+        row_map.setdefault(int(table_id), {})[int(row_index)] = int(row_id)
+    return table_ids, row_map
 
 
 def _infer_period_end(col, meta) -> date | None:
@@ -310,17 +334,23 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                     cur.execute("DELETE FROM source_trace WHERE report_id = %s", (report_id,))
 
                     stage = "recompute_facts_insert"
+                    existing_table_ids, existing_row_map = _load_existing_table_row_map(cur, report_id)
                     metric_cache: dict[str, int] = {}
                     flow_fact_count = 0
                     stock_fact_count = 0
-                    for table in tables:
+                    for table_idx, table in enumerate(tables):
+                        table_id = existing_table_ids[table_idx] if table_idx < len(existing_table_ids) else None
+                        row_ids = None
+                        if table_id is not None:
+                            row_index_map = existing_row_map.get(table_id, {})
+                            row_ids = [row_index_map.get(row_idx) for row_idx in range(len(table.rows))]
                         flow_inc, stock_inc = _insert_facts_for_table(
                             cur,
                             report_id,
                             meta,
                             table,
-                            None,
-                            None,
+                            table_id,
+                            row_ids,
                             now,
                             metric_cache,
                         )

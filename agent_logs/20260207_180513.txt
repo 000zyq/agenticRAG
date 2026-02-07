@@ -1,0 +1,12 @@
+task: improve_pdf2db
+changes:
+- added --recompute-facts path to backfill facts for existing reports
+- refactored fact insertion into helper to support recompute
+metrics_before:
+- meta_period_end_rate: 1.0
+- table_success_rate: 0.5024
+metrics_after:
+- meta_period_end_rate: 1.0
+- table_success_rate: 0.5024
+next_step:
+- run recompute-facts on existing report to populate new fact tables
