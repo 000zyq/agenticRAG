@@ -234,6 +234,7 @@ def _guess_column_labels(header_lines: list[str], num_cols: int) -> list[TableCo
 def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
     blocks: list[TableBlock] = []
     header_buffer: list[tuple[int, str]] = []
+    last_statement_header: tuple[int, str] | None = None
 
     current_rows: list[tuple[int, str]] = []
     current_header: list[str] = []
@@ -298,11 +299,22 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
                     flush_current()
                 continue
 
+            if _detect_statement_type(line):
+                last_statement_header = (page.page, line)
+
             cells = _extract_numbers(line)
-            is_row = len(cells) >= 1 and bool(_strip_numbers(line))
+            has_label = bool(_strip_numbers(line))
+            if not current_rows:
+                is_row = len(cells) >= 2 and has_label
+            else:
+                is_row = len(cells) >= 1 and has_label
             if is_row:
                 if not current_rows:
                     current_header = [text for _, text in header_buffer]
+                    if not _detect_statement_type(" ".join(current_header)) and last_statement_header:
+                        if page.page - last_statement_header[0] <= 1:
+                            if last_statement_header[1] not in current_header:
+                                current_header = [last_statement_header[1]] + current_header
                     current_page_start = page.page
                 current_rows.append((page.page, line))
                 current_page_end = page.page
