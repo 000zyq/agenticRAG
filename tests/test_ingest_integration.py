@@ -4,17 +4,19 @@ import os
 from pathlib import Path
 import pytest
 
-from app.storage.db import get_conn
 from app.ingest.financial_report import sha256_file
-from scripts.ingest_financial_report import insert_report
 
 
 @pytest.mark.integration
 def test_ingest_to_postgres() -> None:
+    pytest.importorskip("psycopg")
     if os.getenv("RUN_DB_TESTS") != "1":
         pytest.skip("RUN_DB_TESTS not enabled")
     if not os.getenv("POSTGRES_DSN"):
         pytest.skip("POSTGRES_DSN not set")
+
+    from app.storage.db import get_conn
+    from scripts.ingest_financial_report import insert_report
 
     path = Path("tmp/ingest/2024年报.pdf")
     if not path.exists():
