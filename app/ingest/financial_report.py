@@ -30,7 +30,7 @@ UNIT_PATTERNS = [
 ]
 
 NUMBER_RE = re.compile(r"(?<![\w.%])[\(]?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?[\)]?(?![\w.%])")
-DATE_RE = re.compile(r"(20\d{2})[年\-/](\d{1,2})[月\-/](\d{1,2})")
+DATE_RE = re.compile(r"(20\d{2})\s*[年\-/]\s*(\d{1,2})\s*[月\-/]\s*(\d{1,2})")
 YEAR_RE = re.compile(r"(20\d{2})")
 
 
@@ -362,6 +362,8 @@ def _extract_metadata(pages: list[PageContent]) -> ReportMeta:
     date_match = _parse_date_from_text(head_text)
     if date_match:
         period_end = date_match
+    elif fiscal_year and report_type == "annual":
+        period_end = date(fiscal_year, 12, 31)
 
     extra = {"raw_head": head_text[:2000]}
     return ReportMeta(

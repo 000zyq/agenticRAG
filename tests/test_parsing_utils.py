@@ -32,6 +32,7 @@ def test_detect_units_usd() -> None:
 
 def test_parse_date_from_text() -> None:
     assert _parse_date_from_text("As of 2024-12-31") == date(2024, 12, 31)
+    assert _parse_date_from_text("截至 2024 年 12 月 31 日") == date(2024, 12, 31)
 
 
 def test_guess_column_labels_years() -> None:

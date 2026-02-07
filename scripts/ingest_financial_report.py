@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import datetime, date
+import hashlib
 import json
 from pathlib import Path
+import re
 
 from app.ingest.financial_report import extract_financial_report, sha256_file
 from app.storage.db import get_conn
@@ -39,6 +41,176 @@ def _record_error(
             conn.commit()
     except Exception:
         return
+
+
+STATEMENT_TYPE_MAP = {
+    "balance_sheet": "balance",
+    "income_statement": "income",
+    "cash_flow": "cashflow",
+}
+
+METRIC_DEFS = [
+    {
+        "metric_code": "revenue",
+        "metric_name_cn": "营业收入",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["营业收入", "营业总收入", "revenue"],
+    },
+    {
+        "metric_code": "net_profit",
+        "metric_name_cn": "净利润",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["净利润", "净收益", "利润总额"],
+    },
+    {
+        "metric_code": "total_assets",
+        "metric_name_cn": "资产总计",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["资产总计", "资产总额"],
+    },
+    {
+        "metric_code": "total_liabilities",
+        "metric_name_cn": "负债合计",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["负债合计", "负债总计"],
+    },
+    {
+        "metric_code": "total_equity",
+        "metric_name_cn": "所有者权益合计",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["所有者权益合计", "股东权益合计", "权益合计"],
+    },
+    {
+        "metric_code": "net_cash_flow_operating",
+        "metric_name_cn": "经营活动产生的现金流量净额",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["经营活动产生的现金流量净额", "经营活动现金流量净额"],
+    },
+    {
+        "metric_code": "net_cash_flow_investing",
+        "metric_name_cn": "投资活动产生的现金流量净额",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["投资活动产生的现金流量净额"],
+    },
+    {
+        "metric_code": "net_cash_flow_financing",
+        "metric_name_cn": "筹资活动产生的现金流量净额",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["筹资活动产生的现金流量净额"],
+    },
+]
+
+
+def _normalize_label(label: str) -> str:
+    cleaned = re.sub(r"[\s\u3000]+", "", label)
+    cleaned = re.sub(r"[：:（）()，,．.。;；-]+", "", cleaned)
+    return cleaned.lower()
+
+
+def _metric_code_from_label(label: str, statement_type: str) -> str:
+    norm = _normalize_label(label)
+    digest = hashlib.sha1(f"{statement_type}:{norm}".encode("utf-8")).hexdigest()[:12]
+    return f"raw_{digest}"
+
+
+def _match_metric(label: str, statement_type: str) -> dict | None:
+    for metric in METRIC_DEFS:
+        if metric["statement_type"] != statement_type:
+            continue
+        for pattern in metric["patterns"]:
+            if pattern.lower() in label.lower():
+                return metric
+    return None
+
+
+def _get_or_create_company(cur, name: str | None, ticker: str | None, now: datetime) -> int | None:
+    if not name:
+        return None
+    cur.execute(
+        "SELECT company_id FROM company WHERE name = %s AND ticker IS NOT DISTINCT FROM %s",
+        (name, ticker),
+    )
+    row = cur.fetchone()
+    if row:
+        return int(row[0])
+    cur.execute(
+        """
+        INSERT INTO company (name, ticker, created_at)
+        VALUES (%s, %s, %s)
+        RETURNING company_id
+        """,
+        (name, ticker, now),
+    )
+    return int(cur.fetchone()[0])
+
+
+def _get_or_create_metric(cur, metric: dict, label: str, statement_type: str, unit_default: str | None, now: datetime, cache: dict[str, int]) -> int:
+    if metric:
+        metric_code = metric["metric_code"]
+        metric_name = metric["metric_name_cn"]
+        value_nature = metric["value_nature"]
+    else:
+        metric_code = _metric_code_from_label(label, statement_type)
+        metric_name = label
+        value_nature = "flow" if statement_type != "balance" else "stock"
+
+    cached = cache.get(metric_code)
+    if cached:
+        return cached
+    cur.execute("SELECT metric_id FROM metric WHERE metric_code = %s", (metric_code,))
+    row = cur.fetchone()
+    if row:
+        metric_id = int(row[0])
+        cache[metric_code] = metric_id
+        return metric_id
+    cur.execute(
+        """
+        INSERT INTO metric (
+            metric_code, metric_name_cn, statement_type, value_nature,
+            unit_default, sign_rule, extra, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING metric_id
+        """,
+        (metric_code, metric_name, statement_type, value_nature, unit_default, "normal", None, now),
+    )
+    metric_id = int(cur.fetchone()[0])
+    cache[metric_code] = metric_id
+    return metric_id
+
+
+def _infer_period_end(col, meta) -> date | None:
+    if col.period_end:
+        return col.period_end
+    if col.label == "current_period" and meta.period_end:
+        return meta.period_end
+    if col.label == "prior_period" and meta.period_end:
+        return date(meta.period_end.year - 1, meta.period_end.month, meta.period_end.day)
+    if col.fiscal_year:
+        return date(col.fiscal_year, 12, 31)
+    return meta.period_end
+
+
+def _infer_period_start(report_type: str | None, period_end: date | None) -> date | None:
+    if report_type == "annual" and period_end:
+        return date(period_end.year, 1, 1)
+    return None
+
+
+def _consolidation_scope(is_consolidated: bool | None) -> str | None:
+    if is_consolidated is True:
+        return "consolidated"
+    if is_consolidated is False:
+        return "parent"
+    return None
 
 
 def insert_report(path: Path) -> int:
@@ -79,16 +251,19 @@ def insert_report(path: Path) -> int:
                     conn.commit()
                     return report_id
 
+                company_id = _get_or_create_company(cur, meta.company_name, meta.ticker, now)
+
                 stage = "insert_report"
                 cur.execute(
                     """
                     INSERT INTO financial_reports (
-                        doc_id, source_path, source_hash, report_title, company_name, ticker,
+                        doc_id, source_path, source_hash, report_title, company_name, ticker, company_id,
                         report_type, fiscal_year, period_start, period_end, currency, units,
                         parse_method, extra, status, currency_status, units_status, period_status,
+                        announce_date, source_url, version_no, is_restated,
                         created_at, updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING report_id
                     """,
                     (
@@ -98,6 +273,7 @@ def insert_report(path: Path) -> int:
                         meta.report_title,
                         meta.company_name,
                         meta.ticker,
+                        company_id,
                         meta.report_type,
                         meta.fiscal_year,
                         meta.period_start,
@@ -110,6 +286,10 @@ def insert_report(path: Path) -> int:
                         currency_status,
                         units_status,
                         period_status,
+                        None,
+                        None,
+                        1,
+                        False,
                         now,
                         now,
                     ),
@@ -147,6 +327,9 @@ def insert_report(path: Path) -> int:
                 )
 
                 stage = "insert_tables"
+                metric_cache: dict[str, int] = {}
+                flow_fact_count = 0
+                stock_fact_count = 0
                 for table in tables:
                     table_currency = table.currency or meta.currency
                     table_units = table.units or meta.units
@@ -236,12 +419,112 @@ def insert_report(path: Path) -> int:
                                 (row_id, col_id, cell.value, cell.raw_text, table_units, None, now),
                             )
 
+                    mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
+                    if not mapped_statement:
+                        continue
+
+                    stage = "insert_facts"
+                    column_entries = list(zip(column_ids, table.columns))
+                    row_entries = list(zip(row_ids, table.rows))
+                    for row_id, row in row_entries:
+                        metric_def = _match_metric(row.label, mapped_statement)
+                        metric_id = _get_or_create_metric(
+                            cur,
+                            metric_def,
+                            row.label,
+                            mapped_statement,
+                            table_units,
+                            now,
+                            metric_cache,
+                        )
+                        for col_idx, (col_id, col) in enumerate(column_entries):
+                            cell = row.cells[col_idx]
+                            if cell.value is None:
+                                continue
+                            period_end = _infer_period_end(col, meta)
+                            period_start = _infer_period_start(meta.report_type, period_end)
+                            consolidation_scope = _consolidation_scope(table.is_consolidated)
+
+                            cur.execute(
+                                """
+                                INSERT INTO source_trace (
+                                    report_id, source_table_id, source_row_id, source_page,
+                                    raw_label, raw_value, column_label, extra, created_at
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                RETURNING trace_id
+                                """,
+                                (
+                                    report_id,
+                                    table_id,
+                                    row_id,
+                                    row.page_number,
+                                    row.label,
+                                    cell.raw_text,
+                                    col.label,
+                                    None,
+                                    now,
+                                ),
+                            )
+                            trace_id = int(cur.fetchone()[0])
+
+                            if mapped_statement == "balance":
+                                cur.execute(
+                                    """
+                                    INSERT INTO financial_stock_fact (
+                                        report_id, metric_id, as_of_date, value, unit, currency,
+                                        consolidation_scope, source_trace_id, quality_score, created_at
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    """,
+                                    (
+                                        report_id,
+                                        metric_id,
+                                        period_end,
+                                        cell.value,
+                                        table_units,
+                                        table_currency,
+                                        consolidation_scope,
+                                        trace_id,
+                                        None,
+                                        now,
+                                    ),
+                                )
+                                stock_fact_count += 1
+                            else:
+                                cur.execute(
+                                    """
+                                    INSERT INTO financial_flow_fact (
+                                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                                        consolidation_scope, audit_flag, source_trace_id, quality_score, created_at
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    """,
+                                    (
+                                        report_id,
+                                        metric_id,
+                                        period_start,
+                                        period_end,
+                                        cell.value,
+                                        table_units,
+                                        table_currency,
+                                        consolidation_scope,
+                                        None,
+                                        trace_id,
+                                        None,
+                                        now,
+                                    ),
+                                )
+                                flow_fact_count += 1
+
                 finished = datetime.utcnow()
                 summary = {
                     "pages": len(pages),
                     "tables": len(tables),
                     "rows": sum(len(t.rows) for t in tables),
                     "cells": sum(len(t.rows) * len(t.columns) for t in tables),
+                    "flow_facts": flow_fact_count,
+                    "stock_facts": stock_fact_count,
                 }
                 cur.execute(
                     """
