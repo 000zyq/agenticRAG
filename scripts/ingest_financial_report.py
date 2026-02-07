@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, date
-import hashlib
 import json
 from pathlib import Path
-import re
 
 from app.ingest.financial_report import extract_financial_report, sha256_file
+from app.ingest.metric_defs import (
+    infer_statement_type_from_rows,
+    match_metric,
+    metric_code_from_label,
+)
 from app.storage.db import get_conn
 
 
@@ -49,86 +52,8 @@ STATEMENT_TYPE_MAP = {
     "cash_flow": "cashflow",
 }
 
-METRIC_DEFS = [
-    {
-        "metric_code": "revenue",
-        "metric_name_cn": "营业收入",
-        "statement_type": "income",
-        "value_nature": "flow",
-        "patterns": ["营业收入", "营业总收入", "revenue"],
-    },
-    {
-        "metric_code": "net_profit",
-        "metric_name_cn": "净利润",
-        "statement_type": "income",
-        "value_nature": "flow",
-        "patterns": ["净利润", "净收益", "利润总额"],
-    },
-    {
-        "metric_code": "total_assets",
-        "metric_name_cn": "资产总计",
-        "statement_type": "balance",
-        "value_nature": "stock",
-        "patterns": ["资产总计", "资产总额"],
-    },
-    {
-        "metric_code": "total_liabilities",
-        "metric_name_cn": "负债合计",
-        "statement_type": "balance",
-        "value_nature": "stock",
-        "patterns": ["负债合计", "负债总计"],
-    },
-    {
-        "metric_code": "total_equity",
-        "metric_name_cn": "所有者权益合计",
-        "statement_type": "balance",
-        "value_nature": "stock",
-        "patterns": ["所有者权益合计", "股东权益合计", "权益合计"],
-    },
-    {
-        "metric_code": "net_cash_flow_operating",
-        "metric_name_cn": "经营活动产生的现金流量净额",
-        "statement_type": "cashflow",
-        "value_nature": "flow",
-        "patterns": ["经营活动产生的现金流量净额", "经营活动现金流量净额"],
-    },
-    {
-        "metric_code": "net_cash_flow_investing",
-        "metric_name_cn": "投资活动产生的现金流量净额",
-        "statement_type": "cashflow",
-        "value_nature": "flow",
-        "patterns": ["投资活动产生的现金流量净额"],
-    },
-    {
-        "metric_code": "net_cash_flow_financing",
-        "metric_name_cn": "筹资活动产生的现金流量净额",
-        "statement_type": "cashflow",
-        "value_nature": "flow",
-        "patterns": ["筹资活动产生的现金流量净额"],
-    },
-]
-
-
-def _normalize_label(label: str) -> str:
-    cleaned = re.sub(r"[\s\u3000]+", "", label)
-    cleaned = re.sub(r"[：:（）()，,．.。;；-]+", "", cleaned)
-    return cleaned.lower()
-
-
-def _metric_code_from_label(label: str, statement_type: str) -> str:
-    norm = _normalize_label(label)
-    digest = hashlib.sha1(f"{statement_type}:{norm}".encode("utf-8")).hexdigest()[:12]
-    return f"raw_{digest}"
-
-
 def _match_metric(label: str, statement_type: str) -> dict | None:
-    for metric in METRIC_DEFS:
-        if metric["statement_type"] != statement_type:
-            continue
-        for pattern in metric["patterns"]:
-            if pattern.lower() in label.lower():
-                return metric
-    return None
+    return match_metric(label, statement_type)
 
 
 def _get_or_create_company(cur, name: str | None, ticker: str | None, now: datetime) -> int | None:
@@ -158,7 +83,7 @@ def _get_or_create_metric(cur, metric: dict, label: str, statement_type: str, un
         metric_name = metric["metric_name_cn"]
         value_nature = metric["value_nature"]
     else:
-        metric_code = _metric_code_from_label(label, statement_type)
+        metric_code = metric_code_from_label(label, statement_type)
         metric_name = label
         value_nature = "flow" if statement_type != "balance" else "stock"
 
@@ -224,6 +149,8 @@ def _insert_facts_for_table(
     metric_cache: dict[str, int],
 ) -> tuple[int, int]:
     mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
+    if not mapped_statement:
+        mapped_statement = infer_statement_type_from_rows(table.rows)
     if not mapped_statement:
         return 0, 0
 
