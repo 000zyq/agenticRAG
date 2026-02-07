@@ -172,6 +172,7 @@ def _insert_facts_for_table(
     row_ids: list[int] | None,
     now: datetime,
     metric_cache: dict[str, int],
+    write_facts: bool = True,
 ) -> tuple[int, int]:
     mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
     if not mapped_statement:
@@ -251,32 +252,33 @@ def _insert_facts_for_table(
                     ),
                 )
                 candidate_id = int(cur.fetchone()[0])
-                cur.execute(
-                    """
-                    INSERT INTO financial_stock_fact (
-                        report_id, metric_id, as_of_date, value, unit, currency,
-                        consolidation_scope, source_trace_id, quality_score, created_at,
-                        selected_candidate_id, resolution_status, resolution_method
+                if write_facts:
+                    cur.execute(
+                        """
+                        INSERT INTO financial_stock_fact (
+                            report_id, metric_id, as_of_date, value, unit, currency,
+                            consolidation_scope, source_trace_id, quality_score, created_at,
+                            selected_candidate_id, resolution_status, resolution_method
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            report_id,
+                            metric_id,
+                            period_end,
+                            cell.value,
+                            table_units,
+                            table_currency,
+                            consolidation_scope,
+                            trace_id,
+                            None,
+                            now,
+                            candidate_id,
+                            "auto",
+                            "single_engine",
+                        ),
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        report_id,
-                        metric_id,
-                        period_end,
-                        cell.value,
-                        table_units,
-                        table_currency,
-                        consolidation_scope,
-                        trace_id,
-                        None,
-                        now,
-                        candidate_id,
-                        "auto",
-                        "single_engine",
-                    ),
-                )
-                stock_fact_count += 1
+                    stock_fact_count += 1
             else:
                 cur.execute(
                     """
@@ -304,39 +306,46 @@ def _insert_facts_for_table(
                     ),
                 )
                 candidate_id = int(cur.fetchone()[0])
-                cur.execute(
-                    """
-                    INSERT INTO financial_flow_fact (
-                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
-                        consolidation_scope, audit_flag, source_trace_id, quality_score, created_at,
-                        selected_candidate_id, resolution_status, resolution_method
+                if write_facts:
+                    cur.execute(
+                        """
+                        INSERT INTO financial_flow_fact (
+                            report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                            consolidation_scope, audit_flag, source_trace_id, quality_score, created_at,
+                            selected_candidate_id, resolution_status, resolution_method
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            report_id,
+                            metric_id,
+                            period_start,
+                            period_end,
+                            cell.value,
+                            table_units,
+                            table_currency,
+                            consolidation_scope,
+                            None,
+                            trace_id,
+                            None,
+                            now,
+                            candidate_id,
+                            "auto",
+                            "single_engine",
+                        ),
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        report_id,
-                        metric_id,
-                        period_start,
-                        period_end,
-                        cell.value,
-                        table_units,
-                        table_currency,
-                        consolidation_scope,
-                        None,
-                        trace_id,
-                        None,
-                        now,
-                        candidate_id,
-                        "auto",
-                        "single_engine",
-                    ),
-                )
-                flow_fact_count += 1
+                    flow_fact_count += 1
 
     return flow_fact_count, stock_fact_count
 
 
-def insert_report(path: Path, recompute_facts: bool = False) -> int:
+def insert_report(
+    path: Path,
+    recompute_facts: bool = False,
+    parse_method_override: str | None = None,
+    candidates_only: bool = False,
+    allow_existing: bool = False,
+) -> int:
     source_hash = sha256_file(path)
     now = datetime.utcnow()
 
@@ -345,6 +354,9 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
     except Exception as exc:
         _record_error(path, None, None, "parse", exc)
         raise
+
+    if parse_method_override:
+        parse_method = parse_method_override
 
     currency_status = "detected" if meta.currency else "missing"
     units_status = "detected" if meta.units else "missing"
@@ -362,7 +374,7 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                 existing = cur.fetchone()
                 if existing:
                     report_id = int(existing[0])
-                    if not recompute_facts:
+                    if not recompute_facts and not allow_existing:
                         cur.execute(
                             """
                             INSERT INTO report_versions (
@@ -372,6 +384,57 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                             """,
                             (report_id, parse_method, "v1", now, now, "skipped", json.dumps({"reason": "duplicate"})),
                         )
+                        conn.commit()
+                        return report_id
+
+                    if allow_existing and not recompute_facts:
+                        cur.execute(
+                            """
+                            INSERT INTO report_versions (
+                                report_id, parse_method, parser_version, started_at, status
+                            )
+                            VALUES (%s, %s, %s, %s, %s)
+                            RETURNING version_id
+                            """,
+                            (report_id, parse_method, "v1", now, "running"),
+                        )
+                        version_id = int(cur.fetchone()[0])
+
+                        stage = "append_candidates"
+                        metric_cache: dict[str, int] = {}
+                        flow_fact_count = 0
+                        stock_fact_count = 0
+                        for table in tables:
+                            flow_inc, stock_inc = _insert_facts_for_table(
+                                cur,
+                                report_id,
+                                version_id,
+                                meta,
+                                table,
+                                None,
+                                None,
+                                now,
+                                metric_cache,
+                                write_facts=False,
+                            )
+                            flow_fact_count += flow_inc
+                            stock_fact_count += stock_inc
+
+                        finished = datetime.utcnow()
+                        summary = {
+                            "flow_facts": flow_fact_count,
+                            "stock_facts": stock_fact_count,
+                            "mode": "append_candidates",
+                        }
+                        cur.execute(
+                            """
+                            UPDATE report_versions
+                            SET finished_at = %s, status = %s, summary_json = %s
+                            WHERE version_id = %s
+                            """,
+                            (finished, "ready", json.dumps(summary), version_id),
+                        )
+
                         conn.commit()
                         return report_id
 
@@ -415,6 +478,7 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                             row_ids,
                             now,
                             metric_cache,
+                            write_facts=not candidates_only,
                         )
                         flow_fact_count += flow_inc
                         stock_fact_count += stock_inc
@@ -616,6 +680,7 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                         row_ids,
                         now,
                         metric_cache,
+                        write_facts=not candidates_only,
                     )
                     flow_fact_count += flow_inc
                     stock_fact_count += stock_inc
@@ -660,13 +725,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest financial report PDF into Postgres.")
     parser.add_argument("path", nargs="?", default="tmp/ingest/2024年报.pdf", help="Path to report PDF")
     parser.add_argument("--recompute-facts", action="store_true", help="Recompute facts for existing report")
+    parser.add_argument("--parse-method", help="Override parse method label stored in report_versions")
+    parser.add_argument(
+        "--candidates-only",
+        action="store_true",
+        help="Only insert candidate facts (skip canonical fact write).",
+    )
+    parser.add_argument(
+        "--allow-existing",
+        action="store_true",
+        help="Allow appending candidates for an existing report without recompute.",
+    )
     args = parser.parse_args()
 
     path = Path(args.path)
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
 
-    report_id = insert_report(path, recompute_facts=args.recompute_facts)
+    report_id = insert_report(
+        path,
+        recompute_facts=args.recompute_facts,
+        parse_method_override=args.parse_method,
+        candidates_only=args.candidates_only,
+        allow_existing=args.allow_existing,
+    )
     print(f"report_id={report_id}")
 
 
