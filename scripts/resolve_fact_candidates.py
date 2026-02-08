@@ -203,7 +203,15 @@ def _fetch_metric_ids(cur, codes: list[str]) -> dict[str, int]:
     return {row[0]: int(row[1]) for row in cur.fetchall()}
 
 
-def _check_balance_consistency(cur, report_id: int) -> list[dict]:
+def _within_tolerance(lhs: Decimal, rhs: Decimal, abs_tol: Decimal, rel_tol: Decimal) -> bool:
+    diff = abs(lhs - rhs)
+    if diff <= abs_tol:
+        return True
+    scale = max(abs(lhs), abs(rhs))
+    return diff <= (scale * rel_tol)
+
+
+def _check_balance_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: Decimal) -> list[dict]:
     metric_ids = _fetch_metric_ids(
         cur,
         [
@@ -249,7 +257,7 @@ def _check_balance_consistency(cur, report_id: int) -> list[dict]:
                     "lhs": float(assets),
                     "rhs": float(liabilities + equity),
                     "diff": float(diff),
-                    "status": "pass" if diff == 0 else "fail",
+                    "status": "pass" if _within_tolerance(assets, liabilities + equity, abs_tol, rel_tol) else "fail",
                 }
             )
         if assets is not None and liab_equity is not None:
@@ -261,9 +269,85 @@ def _check_balance_consistency(cur, report_id: int) -> list[dict]:
                     "lhs": float(assets),
                     "rhs": float(liab_equity),
                     "diff": float(diff),
-                    "status": "pass" if diff == 0 else "fail",
+                    "status": "pass" if _within_tolerance(assets, liab_equity, abs_tol, rel_tol) else "fail",
                 }
             )
+    return checks
+
+
+def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: Decimal) -> list[dict]:
+    metric_ids = _fetch_metric_ids(
+        cur,
+        [
+            "net_cash_flow_operating",
+            "net_cash_flow_investing",
+            "net_cash_flow_financing",
+            "net_increase_cash",
+            "cash_begin",
+            "cash_end",
+        ],
+    )
+    if not metric_ids:
+        return []
+
+    cur.execute(
+        """
+        SELECT metric_id, period_end_date, value
+        FROM financial_flow_fact
+        WHERE report_id = %s AND metric_id = ANY(%s)
+        """,
+        (report_id, list(metric_ids.values())),
+    )
+    by_date: dict[object, dict[int, Decimal]] = defaultdict(dict)
+    for metric_id, period_end_date, value in cur.fetchall():
+        if value is None:
+            continue
+        by_date[period_end_date][int(metric_id)] = value
+
+    checks = []
+    op_id = metric_ids.get("net_cash_flow_operating")
+    inv_id = metric_ids.get("net_cash_flow_investing")
+    fin_id = metric_ids.get("net_cash_flow_financing")
+    inc_id = metric_ids.get("net_increase_cash")
+    begin_id = metric_ids.get("cash_begin")
+    end_id = metric_ids.get("cash_end")
+
+    for period_end, values in by_date.items():
+        operating = values.get(op_id) if op_id else None
+        investing = values.get(inv_id) if inv_id else None
+        financing = values.get(fin_id) if fin_id else None
+        net_increase = values.get(inc_id) if inc_id else None
+        cash_begin = values.get(begin_id) if begin_id else None
+        cash_end = values.get(end_id) if end_id else None
+
+        if operating is not None and investing is not None and financing is not None and net_increase is not None:
+            rhs = operating + investing + financing
+            diff = net_increase - rhs
+            checks.append(
+                {
+                    "name": "net_increase_eq_sum_cashflows",
+                    "period_end_date": str(period_end),
+                    "lhs": float(net_increase),
+                    "rhs": float(rhs),
+                    "diff": float(diff),
+                    "status": "pass" if _within_tolerance(net_increase, rhs, abs_tol, rel_tol) else "fail",
+                }
+            )
+
+        if cash_begin is not None and net_increase is not None and cash_end is not None:
+            rhs = cash_begin + net_increase
+            diff = cash_end - rhs
+            checks.append(
+                {
+                    "name": "cash_end_eq_cash_begin_plus_increase",
+                    "period_end_date": str(period_end),
+                    "lhs": float(cash_end),
+                    "rhs": float(rhs),
+                    "diff": float(diff),
+                    "status": "pass" if _within_tolerance(cash_end, rhs, abs_tol, rel_tol) else "fail",
+                }
+            )
+
     return checks
 
 
@@ -271,6 +355,8 @@ def resolve_report(
     report_id: int,
     min_agree: int = 1,
     tolerance: Decimal = Decimal("0.01"),
+    consistency_abs_tol: Decimal = Decimal("1"),
+    consistency_rel_tol: Decimal = Decimal("0.000001"),
     replace_existing: bool = True,
     dry_run: bool = False,
 ) -> dict:
@@ -342,7 +428,10 @@ def resolve_report(
                     _insert_stock_fact(cur, report_id, chosen, status, method, now)
                     summary["stock_facts"] += 1
 
-                summary["consistency_checks"] = _check_balance_consistency(cur, report_id)
+                summary["consistency_checks"] = (
+                    _check_balance_consistency(cur, report_id, consistency_abs_tol, consistency_rel_tol)
+                    + _check_cashflow_consistency(cur, report_id, consistency_abs_tol, consistency_rel_tol)
+                )
 
             finished = datetime.utcnow()
             cur.execute(
@@ -363,6 +452,8 @@ def main() -> None:
     parser.add_argument("--report-id", type=int, required=True)
     parser.add_argument("--min-agree", type=int, default=1)
     parser.add_argument("--tolerance", type=str, default="0.01")
+    parser.add_argument("--consistency-abs-tol", type=str, default="1")
+    parser.add_argument("--consistency-rel-tol", type=str, default="0.000001")
     parser.add_argument("--no-replace", action="store_true", help="Do not delete existing facts before resolution.")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -372,6 +463,8 @@ def main() -> None:
         report_id=args.report_id,
         min_agree=args.min_agree,
         tolerance=tolerance,
+        consistency_abs_tol=Decimal(args.consistency_abs_tol),
+        consistency_rel_tol=Decimal(args.consistency_rel_tol),
         replace_existing=not args.no_replace,
         dry_run=args.dry_run,
     )

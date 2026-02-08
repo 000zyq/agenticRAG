@@ -175,7 +175,13 @@ def _insert_facts_for_table(
     write_facts: bool = True,
 ) -> tuple[int, int]:
     mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
-    if not mapped_statement:
+    if mapped_statement:
+        matched = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
+        if matched == 0:
+            inferred = infer_statement_type_from_rows(table.rows)
+            if inferred:
+                mapped_statement = inferred
+    else:
         mapped_statement = infer_statement_type_from_rows(table.rows)
     if not mapped_statement:
         return 0, 0
@@ -345,12 +351,13 @@ def insert_report(
     parse_method_override: str | None = None,
     candidates_only: bool = False,
     allow_existing: bool = False,
+    engine: str | None = None,
 ) -> int:
     source_hash = sha256_file(path)
     now = datetime.utcnow()
 
     try:
-        pages, meta, tables, parse_method = extract_financial_report(str(path))
+        pages, meta, tables, parse_method = extract_financial_report(str(path), engine=engine)
     except Exception as exc:
         _record_error(path, None, None, "parse", exc)
         raise
@@ -736,6 +743,7 @@ def main() -> None:
         action="store_true",
         help="Allow appending candidates for an existing report without recompute.",
     )
+    parser.add_argument("--engine", choices=["auto", "pypdf", "mineru"], default="auto", help="Select parser engine.")
     args = parser.parse_args()
 
     path = Path(args.path)
@@ -748,6 +756,7 @@ def main() -> None:
         parse_method_override=args.parse_method,
         candidates_only=args.candidates_only,
         allow_existing=args.allow_existing,
+        engine=None if args.engine == "auto" else args.engine,
     )
     print(f"report_id={report_id}")
 

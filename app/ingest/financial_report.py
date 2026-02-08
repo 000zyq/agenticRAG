@@ -121,7 +121,23 @@ def _mineru_extract(path: Path) -> list[PageContent] | None:
         return results
 
 
-def extract_pdf_to_markdown(path: Path) -> tuple[list[PageContent], str]:
+def extract_pdf_to_markdown(path: Path, engine: str | None = None) -> tuple[list[PageContent], str]:
+    if engine == "mineru":
+        mineru = _mineru_extract(path)
+        if not mineru:
+            raise RuntimeError("MinerU extraction failed or MINERU_CMD not set.")
+        return mineru, "mineru"
+
+    if engine == "pypdf":
+        pages = parse_pdf(str(path))
+        results: list[PageContent] = []
+        for item in pages:
+            text = item["text"]
+            page = item["page"]
+            md = f"## Page {page}\n\n{text}\n"
+            results.append(PageContent(page=page, text_raw=text, text_md=md))
+        return results, "pypdf"
+
     mineru = _mineru_extract(path)
     if mineru:
         return mineru, "mineru"
@@ -380,9 +396,9 @@ def _extract_metadata(pages: list[PageContent]) -> ReportMeta:
     )
 
 
-def extract_financial_report(path: str) -> tuple[list[PageContent], ReportMeta, list[TableBlock], str]:
+def extract_financial_report(path: str, engine: str | None = None) -> tuple[list[PageContent], ReportMeta, list[TableBlock], str]:
     pdf_path = Path(path)
-    pages, parse_method = extract_pdf_to_markdown(pdf_path)
+    pages, parse_method = extract_pdf_to_markdown(pdf_path, engine=engine)
     meta = _extract_metadata(pages)
     tables = _detect_table_blocks(pages)
     return pages, meta, tables, parse_method
