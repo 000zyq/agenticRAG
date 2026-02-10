@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from pathlib import Path
 import re
 
 
-METRIC_DEFS = [
+BASE_METRIC_DEFS = [
     {
         "metric_code": "revenue",
         "metric_name_cn": "营业收入",
@@ -41,11 +43,51 @@ METRIC_DEFS = [
         "patterns": ["管理费用"],
     },
     {
+        "metric_code": "employee_compensation",
+        "metric_name_cn": "职工薪酬",
+        "metric_name_en": "Employee Compensation",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["职工薪酬"],
+    },
+    {
         "metric_code": "rd_expense",
         "metric_name_cn": "研发费用",
         "statement_type": "income",
         "value_nature": "flow",
         "patterns": ["研发费用"],
+    },
+    {
+        "metric_code": "travel_expense",
+        "metric_name_cn": "差旅费",
+        "metric_name_en": "Travel Expense",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["差旅费"],
+    },
+    {
+        "metric_code": "vehicle_expense",
+        "metric_name_cn": "车辆费用",
+        "metric_name_en": "Vehicle Expense",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["车辆费用"],
+    },
+    {
+        "metric_code": "insurance_expense",
+        "metric_name_cn": "保险费",
+        "metric_name_en": "Insurance Expense",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["保险费"],
+    },
+    {
+        "metric_code": "lease_expense",
+        "metric_name_cn": "租赁费",
+        "metric_name_en": "Lease Expense",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["租赁费", "资产租赁费用"],
     },
     {
         "metric_code": "finance_expense",
@@ -59,7 +101,15 @@ METRIC_DEFS = [
         "metric_name_cn": "税金及附加",
         "statement_type": "income",
         "value_nature": "flow",
-        "patterns": ["税金及附加"],
+        "patterns": [
+            "税金及附加",
+            "印花税",
+            "房产税",
+            "城市维护建设税",
+            "土地使用税",
+            "资源税",
+            "环境保护税",
+        ],
     },
     {
         "metric_code": "interest_income",
@@ -375,13 +425,23 @@ METRIC_DEFS = [
         "statement_type": "balance",
         "value_nature": "stock",
         "patterns": ["实收资本", "股本"],
+        "patterns_exact": ["股本"],
     },
     {
         "metric_code": "capital_reserve",
         "metric_name_cn": "资本公积",
         "statement_type": "balance",
         "value_nature": "stock",
-        "patterns": ["资本公积", "股本溢价"],
+        "patterns": ["资本公积"],
+    },
+    {
+        "metric_code": "share_premium",
+        "metric_name_cn": "股本溢价",
+        "metric_name_en": "Share Premium",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["股本溢价"],
+        "parent_metric_code": "capital_reserve",
     },
     {
         "metric_code": "retained_earnings",
@@ -631,19 +691,104 @@ METRIC_DEFS = [
 ]
 
 
+DICTIONARY_PATH = Path(__file__).resolve().parents[2] / "data" / "financial_dictionary.json"
+
+
+def _load_dictionary_file(path: Path) -> list[dict] | None:
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if isinstance(data, dict):
+        items = data.get("metrics")
+    else:
+        items = data
+
+    if not isinstance(items, list) or not items:
+        return None
+
+    normalized: list[dict] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        metric_code = item.get("metric_code")
+        metric_name_cn = item.get("metric_name_cn")
+        statement_type = item.get("statement_type")
+        value_nature = item.get("value_nature")
+        if not metric_code or not metric_name_cn or not statement_type or not value_nature:
+            continue
+        normalized.append(
+            {
+                "metric_code": metric_code,
+                "metric_name_cn": metric_name_cn,
+                "metric_name_en": item.get("metric_name_en"),
+                "statement_type": statement_type,
+                "value_nature": value_nature,
+                "parent_metric_code": item.get("parent_metric_code"),
+                "patterns": list(item.get("patterns") or item.get("patterns_cn") or []),
+                "patterns_exact": list(item.get("patterns_exact") or item.get("patterns_cn_exact") or []),
+                "patterns_en": list(item.get("patterns_en") or []),
+                "patterns_en_exact": list(item.get("patterns_en_exact") or []),
+            }
+        )
+
+    return normalized or None
+
+
+METRIC_DEFS = _load_dictionary_file(DICTIONARY_PATH) or BASE_METRIC_DEFS
+
+
 def normalize_label(label: str) -> str:
     cleaned = re.sub(r"[\s\u3000]+", "", label)
     cleaned = re.sub(r"[：:（）()，,．.。;；-]+", "", cleaned)
     return cleaned.lower()
 
 
-EXACT_MATCH_PATTERNS = {normalize_label("股本")}
+def metric_name_en_from_code(metric_code: str) -> str:
+    return metric_code.replace("_", " ").title()
+
+
+def get_metric_dictionary(use_base: bool = False) -> list[dict]:
+    dictionary: list[dict] = []
+    source = BASE_METRIC_DEFS if use_base else METRIC_DEFS
+    for metric in source:
+        metric_name_en = metric.get("metric_name_en") or metric_name_en_from_code(metric["metric_code"])
+        dictionary.append(
+            {
+                "metric_code": metric["metric_code"],
+                "metric_name_cn": metric["metric_name_cn"],
+                "metric_name_en": metric_name_en,
+                "statement_type": metric["statement_type"],
+                "value_nature": metric["value_nature"],
+                "parent_metric_code": metric.get("parent_metric_code"),
+                "patterns_cn": list(metric.get("patterns", [])),
+                "patterns_cn_exact": list(metric.get("patterns_exact", [])),
+                "patterns_en": list(metric.get("patterns_en", [])),
+                "patterns_en_exact": list(metric.get("patterns_en_exact", [])),
+            }
+        )
+    return dictionary
 
 
 def metric_code_from_label(label: str, statement_type: str) -> str:
     norm = normalize_label(label)
     digest = hashlib.sha1(f"{statement_type}:{norm}".encode("utf-8")).hexdigest()[:12]
     return f"raw_{digest}"
+
+
+def _metric_patterns(metric: dict) -> list[str]:
+    patterns = list(metric.get("patterns", []))
+    patterns += list(metric.get("patterns_en", []))
+    return patterns
+
+
+def _metric_exact_patterns(metric: dict) -> set[str]:
+    patterns = set(metric.get("patterns_exact", []))
+    patterns.update(metric.get("patterns_en_exact", []))
+    return {normalize_label(pattern) for pattern in patterns}
 
 
 def match_metric(label: str, statement_type: str) -> dict | None:
@@ -654,9 +799,10 @@ def match_metric(label: str, statement_type: str) -> dict | None:
             continue
         if label_has_ratio and metric["value_nature"] != "ratio":
             continue
-        for pattern in metric["patterns"]:
+        exact_patterns = _metric_exact_patterns(metric)
+        for pattern in _metric_patterns(metric):
             norm_pattern = normalize_label(pattern)
-            if norm_pattern in EXACT_MATCH_PATTERNS:
+            if norm_pattern in exact_patterns:
                 if norm_label == norm_pattern:
                     return metric
                 continue
