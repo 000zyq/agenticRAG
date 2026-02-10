@@ -1,4 +1,5 @@
 status: in_progress_by_codex
+note: fixing candidate explosion in multi-engine facts; ensure reasonable values per metric
 goal: extract facts from pdf and store into postgres. Ensure correct values from tables are parsed and stored. 
 metric: 
 1️⃣ 字段级准确率（最重要）:

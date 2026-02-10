@@ -381,7 +381,7 @@ METRIC_DEFS = [
         "metric_name_cn": "资本公积",
         "statement_type": "balance",
         "value_nature": "stock",
-        "patterns": ["资本公积"],
+        "patterns": ["资本公积", "股本溢价"],
     },
     {
         "metric_code": "retained_earnings",
@@ -637,6 +637,9 @@ def normalize_label(label: str) -> str:
     return cleaned.lower()
 
 
+EXACT_MATCH_PATTERNS = {normalize_label("股本")}
+
+
 def metric_code_from_label(label: str, statement_type: str) -> str:
     norm = normalize_label(label)
     digest = hashlib.sha1(f"{statement_type}:{norm}".encode("utf-8")).hexdigest()[:12]
@@ -652,7 +655,12 @@ def match_metric(label: str, statement_type: str) -> dict | None:
         if label_has_ratio and metric["value_nature"] != "ratio":
             continue
         for pattern in metric["patterns"]:
-            if normalize_label(pattern) in norm_label:
+            norm_pattern = normalize_label(pattern)
+            if norm_pattern in EXACT_MATCH_PATTERNS:
+                if norm_label == norm_pattern:
+                    return metric
+                continue
+            if norm_pattern in norm_label:
                 return metric
     return None
 

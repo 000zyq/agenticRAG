@@ -193,6 +193,15 @@ def _insert_facts_for_table(
     consolidation_scope = _consolidation_scope(table.is_consolidated)
 
     for row_idx, row in enumerate(table.rows):
+        label = row.label or ""
+        if label in {"(blank)", ""}:
+            continue
+        if len(label) > 60:
+            continue
+        if "。" in label or "，" in label:
+            continue
+        if "公司" in label and len(label) > 30:
+            continue
         metric_def = _match_metric(row.label, mapped_statement)
         metric_id = _get_or_create_metric(
             cur,

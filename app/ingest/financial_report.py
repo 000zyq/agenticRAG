@@ -261,7 +261,21 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
         nonlocal current_rows, current_header, current_page_start, current_page_end
         if not current_rows:
             return
-        rows_cells = [_extract_numbers(line) for _, line in current_rows]
+        filtered_rows: list[tuple[int, str]] = []
+        for row_page, line in current_rows:
+            label = _strip_numbers(line)
+            if not label:
+                continue
+            if len(label) > 60:
+                continue
+            if "。" in label or "，" in label:
+                continue
+            if "公司" in label and len(label) > 30:
+                continue
+            filtered_rows.append((row_page, line))
+
+        rows_cells = [_extract_numbers(line) for _, line in filtered_rows]
+        row_labels = [_strip_numbers(line) for _, line in filtered_rows]
         max_cols = max((len(cells) for cells in rows_cells), default=0)
         if max_cols == 0:
             current_rows = []
@@ -270,9 +284,42 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
             current_page_end = None
             return
 
+        rows_total = len(rows_cells)
+        rows_with_two = sum(1 for cells in rows_cells if len(cells) >= 2)
+        short_label_rows = sum(1 for label in row_labels if len(label) <= 40)
+        header_text = " ".join(current_header)
+        header_has_period = bool(YEAR_RE.findall(header_text)) or ("本期" in header_text) or ("上期" in header_text)
+        statement_hint = _detect_statement_type(header_text)
+
+        # Basic table quality filters to avoid treating narrative paragraphs as tables.
+        if max_cols < 2 or rows_total < 2:
+            current_rows = []
+            current_header = []
+            current_page_start = None
+            current_page_end = None
+            return
+        if rows_with_two < 2 or rows_with_two / rows_total < 0.5:
+            current_rows = []
+            current_header = []
+            current_page_start = None
+            current_page_end = None
+            return
+        if short_label_rows / rows_total < 0.5:
+            current_rows = []
+            current_header = []
+            current_page_start = None
+            current_page_end = None
+            return
+        if not header_has_period and not statement_hint and rows_total < 5:
+            current_rows = []
+            current_header = []
+            current_page_start = None
+            current_page_end = None
+            return
+
         columns = _guess_column_labels(current_header, max_cols)
         table_rows: list[TableRow] = []
-        for (row_page, line), cells in zip(current_rows, rows_cells):
+        for (row_page, line), cells in zip(filtered_rows, rows_cells):
             label = _strip_numbers(line)
             if not label:
                 label = "(blank)"
@@ -280,8 +327,7 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
                 cells = [TableCell(value=None, raw_text=None)] * (max_cols - len(cells)) + cells
             table_rows.append(TableRow(label=label, cells=cells, page_number=row_page))
 
-        header_text = " ".join(current_header)
-        statement_type = _detect_statement_type(header_text)
+        statement_type = statement_hint
         currency, units = _detect_units(header_text)
         title = current_header[0] if current_header else None
         section_title = current_header[-1] if current_header else None
@@ -328,7 +374,7 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
                 if not current_rows:
                     current_header = [text for _, text in header_buffer]
                     if not _detect_statement_type(" ".join(current_header)) and last_statement_header:
-                        if page.page - last_statement_header[0] <= 1:
+                        if page.page - last_statement_header[0] <= 2:
                             if last_statement_header[1] not in current_header:
                                 current_header = [last_statement_header[1]] + current_header
                     current_page_start = page.page
