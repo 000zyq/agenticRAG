@@ -76,6 +76,54 @@
       "patterns_en_exact": []
     },
     {
+      "metric_code": "office_expense",
+      "metric_name_cn": "办公费",
+      "metric_name_en": "Office Expense",
+      "statement_type": "income",
+      "value_nature": "flow",
+      "parent_metric_code": "admin_expense",
+      "patterns_cn": [
+        "办公费"
+      ],
+      "patterns_cn_exact": [
+        "办公费"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
+      "metric_code": "entertainment_expense",
+      "metric_name_cn": "业务招待费",
+      "metric_name_en": "Entertainment Expense",
+      "statement_type": "income",
+      "value_nature": "flow",
+      "parent_metric_code": "admin_expense",
+      "patterns_cn": [
+        "业务招待费"
+      ],
+      "patterns_cn_exact": [
+        "业务招待费"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
+      "metric_code": "service_fee",
+      "metric_name_cn": "服务费",
+      "metric_name_en": "Service Fee",
+      "statement_type": "income",
+      "value_nature": "flow",
+      "parent_metric_code": "admin_expense",
+      "patterns_cn": [
+        "服务费"
+      ],
+      "patterns_cn_exact": [
+        "服务费"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
       "metric_code": "employee_compensation",
       "metric_name_cn": "职工薪酬",
       "metric_name_en": "Employee Compensation",
@@ -382,6 +430,22 @@
       "patterns_en_exact": []
     },
     {
+      "metric_code": "security_deposit",
+      "metric_name_cn": "保证金",
+      "metric_name_en": "Security Deposit",
+      "statement_type": "balance",
+      "value_nature": "stock",
+      "parent_metric_code": "other_receivables",
+      "patterns_cn": [
+        "保证金"
+      ],
+      "patterns_cn_exact": [
+        "保证金"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
       "metric_code": "notes_receivable",
       "metric_name_cn": "应收票据",
       "metric_name_en": "Notes Receivable",
@@ -660,6 +724,54 @@
         "短期借款"
       ],
       "patterns_cn_exact": [],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
+      "metric_code": "mortgage_loan",
+      "metric_name_cn": "抵押借款",
+      "metric_name_en": "Mortgage Loan",
+      "statement_type": "balance",
+      "value_nature": "stock",
+      "parent_metric_code": "short_term_borrowings",
+      "patterns_cn": [
+        "抵押借款"
+      ],
+      "patterns_cn_exact": [
+        "抵押借款"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
+      "metric_code": "guaranteed_loan",
+      "metric_name_cn": "保证借款",
+      "metric_name_en": "Guaranteed Loan",
+      "statement_type": "balance",
+      "value_nature": "stock",
+      "parent_metric_code": "short_term_borrowings",
+      "patterns_cn": [
+        "保证借款"
+      ],
+      "patterns_cn_exact": [
+        "保证借款"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
+      "metric_code": "credit_loan",
+      "metric_name_cn": "信用借款",
+      "metric_name_en": "Credit Loan",
+      "statement_type": "balance",
+      "value_nature": "stock",
+      "parent_metric_code": "short_term_borrowings",
+      "patterns_cn": [
+        "信用借款"
+      ],
+      "patterns_cn_exact": [
+        "信用借款"
+      ],
       "patterns_en": [],
       "patterns_en_exact": []
     },

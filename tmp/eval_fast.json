@@ -8,10 +8,10 @@
   "rows_total": 845,
   "cells_total": 2321,
   "numeric_cell_rate": 0.8660060318828091,
-  "core_metric_match_rate": 0.285207100591716,
+  "core_metric_match_rate": 0.30177514792899407,
   "meta_currency_rate": 1.0,
   "meta_units_rate": 1.0,
   "meta_period_end_rate": 1.0,
-  "p95_parse_time": 4.074066162109375,
+  "p95_parse_time": 3.877732038497925,
   "errors": []
 }
