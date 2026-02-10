@@ -19,6 +19,38 @@
       "patterns_en_exact": []
     },
     {
+      "metric_code": "main_business_revenue",
+      "metric_name_cn": "主营业务收入",
+      "metric_name_en": "Main Business Revenue",
+      "statement_type": "income",
+      "value_nature": "flow",
+      "parent_metric_code": "revenue",
+      "patterns_cn": [
+        "主营业务收入"
+      ],
+      "patterns_cn_exact": [
+        "主营业务"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
+      "metric_code": "other_business_revenue",
+      "metric_name_cn": "其他业务收入",
+      "metric_name_en": "Other Business Revenue",
+      "statement_type": "income",
+      "value_nature": "flow",
+      "parent_metric_code": "revenue",
+      "patterns_cn": [
+        "其他业务收入"
+      ],
+      "patterns_cn_exact": [
+        "其他业务"
+      ],
+      "patterns_en": [],
+      "patterns_en_exact": []
+    },
+    {
       "metric_code": "operating_cost",
       "metric_name_cn": "营业成本",
       "metric_name_en": "Operating Cost",

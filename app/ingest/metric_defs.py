@@ -15,6 +15,26 @@ BASE_METRIC_DEFS = [
         "patterns": ["营业收入", "主营业务收入", "营业总收入", "revenue"],
     },
     {
+        "metric_code": "main_business_revenue",
+        "metric_name_cn": "主营业务收入",
+        "metric_name_en": "Main Business Revenue",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["主营业务收入"],
+        "patterns_exact": ["主营业务"],
+        "parent_metric_code": "revenue",
+    },
+    {
+        "metric_code": "other_business_revenue",
+        "metric_name_cn": "其他业务收入",
+        "metric_name_en": "Other Business Revenue",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["其他业务收入"],
+        "patterns_exact": ["其他业务"],
+        "parent_metric_code": "revenue",
+    },
+    {
         "metric_code": "operating_cost",
         "metric_name_cn": "营业成本",
         "statement_type": "income",
@@ -870,12 +890,11 @@ def match_metric(label: str, statement_type: str) -> dict | None:
         if label_has_ratio and metric["value_nature"] != "ratio":
             continue
         exact_patterns = _metric_exact_patterns(metric)
+        for norm_pattern in exact_patterns:
+            if norm_label == norm_pattern:
+                return metric
         for pattern in _metric_patterns(metric):
             norm_pattern = normalize_label(pattern)
-            if norm_pattern in exact_patterns:
-                if norm_label == norm_pattern:
-                    return metric
-                continue
             if norm_pattern in norm_label:
                 return metric
     return None
