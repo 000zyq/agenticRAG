@@ -12,10 +12,19 @@
         "营业收入",
         "主营业务收入",
         "营业总收入",
-        "revenue"
+        "revenue",
+        "分部对外交易收入"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Revenues",
+        "Income from external transactions",
+        "Total revenues",
+        "Revenue",
+        "Total revenue",
+        "Revenue, operating",
+        "Total revenue, operating"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -47,7 +56,10 @@
       "patterns_cn_exact": [
         "其他业务"
       ],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other operating income",
+        "Total"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -59,10 +71,18 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "营业成本",
-        "主营业务成本"
+        "主营业务成本",
+        "营业总成本",
+        "来自个别利润表的营业成本",
+        "其中：营业成本"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cost of revenues",
+        "Total cost of revenues",
+        "Operating cost",
+        "Including, operating cost"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -87,10 +107,17 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "销售费用"
+        "销售费用",
+        "销售费用合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Selling and marketing expense",
+        "Total selling and marketing expense",
+        "Total",
+        "Selling expense",
+        "Selling expenses, operating"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -101,10 +128,15 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "管理费用"
+        "管理费用",
+        "管理费用合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "General and administrative expenses",
+        "Total general and administrative expenses",
+        "Total"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -115,12 +147,16 @@
       "value_nature": "flow",
       "parent_metric_code": "admin_expense",
       "patterns_cn": [
-        "办公费"
+        "办公费",
+        "办公费，管理费用"
       ],
       "patterns_cn_exact": [
         "办公费"
       ],
-      "patterns_en": [],
+      "patterns_en": [
+        "Office allowance, general and administrative expense",
+        "Office allowance"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -131,12 +167,16 @@
       "value_nature": "flow",
       "parent_metric_code": "admin_expense",
       "patterns_cn": [
-        "业务招待费"
+        "业务招待费",
+        "业务招待费，管理费用"
       ],
       "patterns_cn_exact": [
         "业务招待费"
       ],
-      "patterns_en": [],
+      "patterns_en": [
+        "Business entertainment fee, general and administrative expense",
+        "Business entertainment fee"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -163,10 +203,19 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "职工薪酬"
+        "职工薪酬",
+        "不可作纳税抵扣的支出对所得税的影响，职工薪酬",
+        "职工薪酬，销售费用",
+        "职工薪酬，管理费用"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Impact on income tax due to non-deductible expenses, staff costs",
+        "Staff costs",
+        "Employee benefits, selling expenses",
+        "Employee benefits",
+        "Employee benefits, general and administrative expense"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -191,10 +240,16 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "差旅费"
+        "差旅费",
+        "差旅费，管理费用"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Traveling expense, general and administrative expense",
+        "Traveling expense",
+        "Travel expense",
+        "Travel expense, operating"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -219,10 +274,17 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "保险费"
+        "保险费",
+        "保险费，销售费用",
+        "保险费，管理费用"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Insurance expense, selling expenses",
+        "Insurance expense",
+        "Insurance expense, general and administrative expense",
+        "Insurance expense, operating"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -248,10 +310,18 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "财务费用"
+        "财务费用",
+        "财务费用调整",
+        "财务费用合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Adjustments for finance costs",
+        "Finance costs",
+        "Finance expense",
+        "Total finance expense",
+        "Total"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -271,7 +341,10 @@
         "环境保护税"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "City maintenance and construction tax",
+        "Natural resources tax"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -282,10 +355,16 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "利息收入"
+        "利息收入",
+        "利息收入，金融企业",
+        "减：利息收入"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Interest income, financial enterprises",
+        "Interest income",
+        "Total"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -296,10 +375,16 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "利息费用"
+        "利息费用",
+        "利息支出，金融企业",
+        "利息支出"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Interest expense, financial enterprises",
+        "Interest expense",
+        "Total"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -313,7 +398,9 @@
         "其他收益"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other income"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -324,10 +411,17 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "营业外收入"
+        "营业外收入",
+        "营业外收入合计",
+        "加：营业外收入"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Non-operating income",
+        "Total non-operating income",
+        "Total",
+        "Add, non-operating income"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -338,10 +432,17 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "营业外支出"
+        "营业外支出",
+        "营业外支出合计",
+        "减：营业外支出"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Non-operating expenses",
+        "Total non-operating expenses",
+        "Total",
+        "Less, non-operating expenses"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -352,10 +453,13 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "营业利润"
+        "营业利润",
+        "营业利润（亏损以“－”号填列）"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Operating profits"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -366,10 +470,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "利润总额"
+        "利润总额",
+        "利润总额（亏损总额以“－”号填列）"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Profit (loss) before income taxes",
+        "Profit (loss) before tax"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -381,10 +489,17 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "所得税费用",
-        "所得税"
+        "所得税",
+        "所得税费用合计",
+        "减：所得税费用"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Income tax expenses",
+        "Total income tax expenses",
+        "Total",
+        "Less, income tax expense"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -399,7 +514,9 @@
         "净收益"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Profit (loss)"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -429,7 +546,10 @@
         "基本每股收益"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Basic earnings (loss) per share",
+        "Total basic earnings (loss) per share"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -443,7 +563,10 @@
         "稀释每股收益"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Diluted earnings (loss) per share",
+        "Total diluted earnings (loss) per share"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -455,10 +578,31 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "货币资金",
-        "现金及现金等价物"
+        "现金及现金等价物",
+        "现金和现金等价物",
+        "期初现金和现金等价物",
+        "期末现金和现金等价物",
+        "现金和现金等价物合计",
+        "现金及现金等价物的期末余额",
+        "加：年初现金及现金等价物余额",
+        "减：现金及现金等价物的年初余额",
+        "计划资产公允价值，现金及现金等价物",
+        "货币资金合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash and cash equivalents",
+        "Cash and cash equivalents at beginning of period",
+        "Cash and cash equivalents at end of period",
+        "Total cash and cash equivalents",
+        "Cash and cash equivalents as at end of period",
+        "Add, cash and cash equivalents at beginning of period",
+        "Total",
+        "Less, cash and cash equivalents at beginning of period",
+        "Cash and cash equivalents, amount contributed to fair value of plan assets",
+        "Currency funds",
+        "Total currency funds"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -485,10 +629,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "应收票据"
+        "应收票据",
+        "应收票据账面余额合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Notes receivable",
+        "Total notes receivable"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -502,7 +650,9 @@
         "应收账款"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Accounts receivable"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -516,7 +666,10 @@
         "预付款项"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Advances to suppliers",
+        "Prepayments"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -530,7 +683,9 @@
         "其他应收款"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other receivables"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -541,10 +696,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "存货"
+        "存货",
+        "存货期末账面价值"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Inventories",
+        "Inventory, at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -555,10 +714,21 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "交易性金融资产"
+        "交易性金融资产",
+        "交易性金融资产，公允价值变动收益发生额",
+        "交易性金融资产，公允价值变动收益",
+        "交易性金融资产未折现的合同现金流量",
+        "交易性金融资产公允价值",
+        "交易性金融资产，外币"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Financial assets held for trading, profit or loss arising from changes in fair value",
+        "Financial assets held for trading",
+        "Contractual undiscounted cash flows of financial assets held for trading",
+        "Financial assets held for trading, at fair value",
+        "Financial assets held for trading, foreign currencies"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -569,10 +739,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "流动资产合计"
+        "流动资产合计",
+        "流动资产"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Current assets",
+        "Total current assets"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -583,10 +757,16 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "其他流动资产"
+        "其他流动资产",
+        "其他流动资产年初账面余额",
+        "其他流动资产期末账面余额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other current assets",
+        "Other current assets at beginning of period",
+        "Other current assets at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -598,10 +778,14 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "长期股权投资",
-        "长期投资"
+        "长期投资",
+        "长期股权投资账面价值"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Long-term equity investments",
+        "Long-term equity investments, carrying amount"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -612,10 +796,17 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "固定资产"
+        "固定资产",
+        "固定资产期初账面价值",
+        "固定资产期末账面价值",
+        "固定资产年初账面价值"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Fixed assets",
+        "Fixed assets at beginning of period",
+        "Fixed assets at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -626,10 +817,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "在建工程"
+        "在建工程",
+        "在建工程账面价值"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Construction in progress",
+        "Construction in progress, carrying amount"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -640,10 +835,16 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "无形资产"
+        "无形资产",
+        "无形资产年初账面价值",
+        "无形资产期末账面价值"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Intangible assets",
+        "Intangible assets at end of period",
+        "Intangible assets at beginning of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -654,10 +855,18 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "商誉"
+        "商誉",
+        "商誉期初账面价值",
+        "商誉期末账面价值",
+        "核心一级资本扣除项目，商誉"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Goodwill",
+        "Goodwill at beginning of period",
+        "Goodwill at end of period",
+        "Deductions of core tier one capital, goodwill"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -671,7 +880,12 @@
         "生产性生物资产"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Non-current biological assets",
+        "Biological assets",
+        "Biological assets at beginning of period",
+        "Biological assets at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -685,7 +899,11 @@
         "使用权资产"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Right-of-use assets",
+        "Right-of-use assets at beginning of period",
+        "Right-of-use assets at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -696,10 +914,16 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "长期待摊费用"
+        "长期待摊费用",
+        "长期待摊费用年初账面余额",
+        "长期待摊费用期末账面余额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Long-term deferred expenses",
+        "Long-term deferred expenses at beginning of period",
+        "Long-term deferred expenses at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -713,7 +937,9 @@
         "其他非流动资产"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other non-current assets"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -724,10 +950,16 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "非流动资产合计"
+        "非流动资产合计",
+        "非流动资产",
+        "扣除金融工具和递延所得税资产外的非流动资产"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Non-current assets",
+        "Total non-current assets",
+        "Non-current assets other than financial instruments and deferred tax assets"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -739,10 +971,16 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "资产总计",
-        "资产总额"
+        "资产总额",
+        "资产"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Assets",
+        "Total assets",
+        "Assets at beginning of period",
+        "Assets at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -753,10 +991,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "短期借款"
+        "短期借款",
+        "各外币资产负债项目外汇风险敞口情况，短期借款"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Short-term borrowings",
+        "Exposure to foreign exchange risk of liabilities in foreign currencies short-term borrowings"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -815,10 +1057,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "应付票据"
+        "应付票据",
+        "应付票据账面余额合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Notes payable",
+        "Total notes payable"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -829,10 +1075,13 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "应付账款"
+        "应付账款",
+        "应付账款账面余额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Accounts payable"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -844,10 +1093,18 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "合同负债",
-        "预收款项"
+        "预收款项",
+        "预收账款账面余额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Receipts in advance",
+        "Receipts in advance, balance",
+        "Contract liabilities",
+        "Contract liabilities at beginning of period",
+        "Contract liabilities at end of period",
+        "Total contract liabilities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -858,10 +1115,15 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "应付职工薪酬"
+        "应付职工薪酬",
+        "应付职工薪酬，流动部分"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Current portion of employee benefits payables",
+        "Employee benefits payable",
+        "Employee benefits payables"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -872,10 +1134,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "应交税费"
+        "应交税费",
+        "应交税费合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Tax payables",
+        "Total tax payables"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -889,7 +1155,10 @@
         "其他应付款"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other payables",
+        "Others"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -900,10 +1169,14 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "一年内到期的非流动负债"
+        "一年内到期的非流动负债",
+        "一年内到期的非流动负债合计"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Current portion of long-term liabilities",
+        "Total current portion of long-term liabilities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -917,7 +1190,9 @@
         "其他流动负债"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other current liabilities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -928,10 +1203,18 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "长期借款"
+        "长期借款",
+        "长期借款，非流动部分",
+        "长期借款合计",
+        "各外币资产负债项目外汇风险敞口情况，长期借款"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Non-current portion of long-term borrowings",
+        "Long-term borrowings",
+        "Total long-term borrowings",
+        "Exposure to foreign exchange risk of liabilities in foreign currencies long-term borrowings"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -942,10 +1225,35 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "应付债券"
+        "应付债券",
+        "应付债券年初账面余额",
+        "应付债券期末账面余额",
+        "期末账面余额",
+        "年初账面余额",
+        "发行债券利息支出发生额",
+        "发行债券利息支出（收入以“－”号填列）",
+        "应付债券未折现的合同现金流量",
+        "各外币资产负债项目外汇风险敞口情况，应付债券",
+        "应付利息，债券利息",
+        "应付利息，应付债券",
+        "应付债券，外币"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Bonds payable",
+        "Bonds payables, balance at beginning of period",
+        "Bonds payables, balance at end of period",
+        "Balance at end of period",
+        "Balance at beginning of period",
+        "Interest expense of debt, incurring amount",
+        "Bonds payables",
+        "Contractual undiscounted cash flows of bonds payable",
+        "Exposure to foreign exchange risk of liabilities in foreign currencies bond payable",
+        "Bond payable",
+        "Interest payables, bonds",
+        "Interest payables, bonds payable",
+        "Bonds payables, foreign currencies"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -957,10 +1265,17 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "负债合计",
-        "负债总计"
+        "负债总计",
+        "负债",
+        "负债总额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Liabilities",
+        "Total liabilities",
+        "Liabilities at beginning of period",
+        "Liabilities at end of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -988,10 +1303,20 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "资本公积"
+        "资本公积",
+        "资本公积期初账面余额",
+        "资本公积期末账面余额",
+        "资本公积年初账面余额",
+        "核心一级资本，资本公积"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Capital reserves",
+        "Capital reserves, balance at beginning of period",
+        "Capital reserves, balance at end of period",
+        "Core tier one capital, capital reserves",
+        "Capital reserve"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1005,7 +1330,9 @@
         "股本溢价"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Share premium"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1016,10 +1343,28 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "未分配利润"
+        "未分配利润",
+        "未分配利润期初账面余额",
+        "未分配利润期末账面余额",
+        "期末账面余额",
+        "期初账面余额",
+        "期末未分配利润",
+        "调整前，上年末未分配利润",
+        "核心一级资本，未分配利润"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Retained earnings",
+        "Retained earnings, balance at beginning of period",
+        "Retained earnings, balance at end of period",
+        "Balance at end of period",
+        "Balance at beginning of period",
+        "Profit distribution, at end of period",
+        "Unadjusted profit distribution, at beginning of period",
+        "Core tier one capital, unappropriated profit",
+        "Unappropriated profit",
+        "Total retained earnings"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1030,10 +1375,16 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "其他权益工具"
+        "其他权益工具",
+        "其他权益工具，期初余额",
+        "其他权益工具，期末余额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other equity instruments",
+        "Other equity instruments, at beginning balance of period",
+        "Other equity instruments, at end balance of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1044,10 +1395,20 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "库存股"
+        "库存股",
+        "库存股账面余额",
+        "库存股期初账面余额",
+        "库存股期末账面余额",
+        "减：库存股"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Treasury stock, balance",
+        "Treasury shares",
+        "Treasury shares, balance at beginning of period",
+        "Treasury shares, balance at end of period",
+        "Less, treasury shares"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1058,10 +1419,23 @@
       "value_nature": "stock",
       "parent_metric_code": null,
       "patterns_cn": [
-        "其他综合收益"
+        "其他综合收益",
+        "其他综合收益期初账面余额",
+        "其他综合收益期末账面余额",
+        "其他综合收益的税后净额",
+        "税后净额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Accumulated other comprehensive income",
+        "Accumulated other comprehensive income, balance at beginning of period",
+        "Accumulated other comprehensive income, balance at end of period",
+        "Other comprehensive income, net of tax",
+        "Amount net of tax",
+        "Other comprehensive income",
+        "Total accumulated other comprehensive income",
+        "Total other comprehensive income"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1089,10 +1463,23 @@
       "patterns_cn": [
         "所有者权益合计",
         "股东权益合计",
-        "权益合计"
+        "权益合计",
+        "所有者权益（或股东权益）",
+        "所有者权益（或股东权益）合计",
+        "所有者权益（或股东权益），年初余额",
+        "所有者权益（或股东权益），年末余额",
+        "本期期末余额",
+        "上期期末余额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Equity",
+        "Total equity",
+        "Equity, balance at beginning of period",
+        "Equity, balance at end of period",
+        "Equity at end of period",
+        "Equity at beginning of period"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1118,10 +1505,15 @@
       "parent_metric_code": null,
       "patterns_cn": [
         "经营活动产生的现金流量净额",
-        "经营活动现金流量净额"
+        "经营活动现金流量净额",
+        "经营活动产生的现金流量"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash flows from (used in) operating activities",
+        "Net cash flows from operating activities",
+        "Net cash flows from (used in) operating activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1163,7 +1555,9 @@
         "收到其他与经营活动有关的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other cash receipts from operating activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1177,7 +1571,9 @@
         "支付给职工以及为职工支付的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash paid to and on behalf of employees"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1191,7 +1587,9 @@
         "支付的各项税费"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Payments of all types of taxes"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1205,7 +1603,9 @@
         "支付其他与经营活动有关的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Other cash payments from operating activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1216,10 +1616,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "经营活动现金流入小计"
+        "经营活动现金流入小计",
+        "经营活动现金流入"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash inflows from operating activities",
+        "Total cash inflows from operating activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1230,10 +1634,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "经营活动现金流出小计"
+        "经营活动现金流出小计",
+        "经营活动现金流出"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash outflows from operating activities",
+        "Total cash outflows from operating activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1244,10 +1652,15 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "投资活动产生的现金流量净额"
+        "投资活动产生的现金流量净额",
+        "投资活动产生的现金流量"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash flows from (used in) investing activities",
+        "Net cash flows from investing activities",
+        "Net cash flows from (used in) investing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1261,7 +1674,9 @@
         "收回投资收到的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash receipts from returns of investments"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1275,7 +1690,9 @@
         "取得投资收益收到的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash received from returns on investments"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1302,10 +1719,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "投资活动现金流入小计"
+        "投资活动现金流入小计",
+        "投资活动现金流入"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash inflows from investing activities",
+        "Total cash inflows from investing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1335,7 +1756,9 @@
         "投资支付的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash payments for investments"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1346,10 +1769,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "投资活动现金流出小计"
+        "投资活动现金流出小计",
+        "投资活动现金流出"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash outflows from investing activities",
+        "Total cash outflows from investing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1360,10 +1787,15 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "筹资活动产生的现金流量净额"
+        "筹资活动产生的现金流量净额",
+        "筹资活动产生的现金流量"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash flows from (used in) financing activities",
+        "Net cash flows from financing activities",
+        "Net cash flows from (used in) financing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1377,7 +1809,9 @@
         "取得借款收到的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash received from borrowings"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1391,7 +1825,9 @@
         "收到其他与筹资活动有关的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash receipts related to other financing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1402,10 +1838,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "筹资活动现金流入小计"
+        "筹资活动现金流入小计",
+        "筹资活动现金流入"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash inflows from financing activities",
+        "Total cash inflows from financing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1419,7 +1859,9 @@
         "偿还债务支付的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash repayments for debts"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1433,7 +1875,9 @@
         "支付其他与筹资活动有关的现金"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash payments related to other financing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1444,10 +1888,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "筹资活动现金流出小计"
+        "筹资活动现金流出小计",
+        "筹资活动现金流出"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Cash outflows from financing activities",
+        "Total cash outflows from financing activities"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1461,7 +1909,10 @@
         "现金及现金等价物净增加额"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Increase (decrease) in cash and cash equivalents",
+        "Net increase in cash and cash equivalents"
+      ],
       "patterns_en_exact": []
     },
     {
@@ -1500,10 +1951,14 @@
       "value_nature": "flow",
       "parent_metric_code": null,
       "patterns_cn": [
-        "折旧及摊销"
+        "折旧及摊销",
+        "业务及管理费，折旧及摊销"
       ],
       "patterns_cn_exact": [],
-      "patterns_en": [],
+      "patterns_en": [
+        "Business and administrative expenses, depreciation and amortization",
+        "Depreciation and amortization"
+      ],
       "patterns_en_exact": []
     }
   ]
