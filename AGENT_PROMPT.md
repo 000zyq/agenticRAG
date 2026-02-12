@@ -117,7 +117,9 @@ agent_logs/<timestamp>.md
 Format:
 
 task:
+challenges:
+findings:
 changes:
 metrics_before:
 metrics_after:
-next_step:
+next_steps:
