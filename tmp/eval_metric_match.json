@@ -1,0 +1,32 @@
+{
+  "required": {
+    "total": 38,
+    "exact_match": 38,
+    "exact_match_rate": 1.0,
+    "positive_precision": 1.0,
+    "positive_recall": 1.0,
+    "positive_f1": 1.0,
+    "false_positive_rate_on_negatives": 0.0,
+    "errors": []
+  },
+  "all_cases": {
+    "total": 42,
+    "exact_match": 42,
+    "exact_match_rate": 1.0,
+    "positive_precision": 1.0,
+    "positive_recall": 1.0,
+    "positive_f1": 1.0,
+    "false_positive_rate_on_negatives": 0.0,
+    "errors": []
+  },
+  "optional_only": {
+    "total": 4,
+    "exact_match": 4,
+    "exact_match_rate": 1.0,
+    "positive_precision": 1.0,
+    "positive_recall": 1.0,
+    "positive_f1": 1.0,
+    "false_positive_rate_on_negatives": 0.0,
+    "errors": []
+  }
+}

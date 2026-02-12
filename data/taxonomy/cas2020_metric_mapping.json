@@ -1,0 +1,1376 @@
+{
+  "source_toc": "data/taxonomy/cas2020_toc.json",
+  "dictionary": "data/financial_dictionary.json",
+  "records": [
+    {
+      "cas_code": "CAS1",
+      "cas_name": "存货",
+      "sub_code": "801110",
+      "sub_name": "存货",
+      "sub_name_raw": "附注_存货（一般工商业）",
+      "metric_code": "inventory",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS1",
+      "cas_name": "存货",
+      "sub_code": "801120",
+      "sub_name": "存货",
+      "sub_name_raw": "附注_存货（房地产行业）",
+      "metric_code": "inventory",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS2",
+      "cas_name": "长期股权投资",
+      "sub_code": "802100",
+      "sub_name": "长期股权投资",
+      "sub_name_raw": "附注_长期股权投资",
+      "metric_code": "long_term_investments",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS3",
+      "cas_name": "投资性房地产",
+      "sub_code": "803100",
+      "sub_name": "投资性房地产",
+      "sub_name_raw": "附注_投资性房地产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS4",
+      "cas_name": "固定资产",
+      "sub_code": "804100",
+      "sub_name": "固定资产",
+      "sub_name_raw": "附注_固定资产",
+      "metric_code": "fixed_assets",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS5",
+      "cas_name": "生物资产",
+      "sub_code": "805100",
+      "sub_name": "生产性生物资产和公益性生物资产",
+      "sub_name_raw": "附注_生产性生物资产和公益性生物资产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS6",
+      "cas_name": "无形资产",
+      "sub_code": "806100",
+      "sub_name": "无形资产",
+      "sub_name_raw": "附注_无形资产",
+      "metric_code": "intangible_assets",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS7",
+      "cas_name": "非货币性资产交换",
+      "sub_code": "807100",
+      "sub_name": "非货币性资产交换",
+      "sub_name_raw": "附注_非货币性资产交换",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS8",
+      "cas_name": "资产减值",
+      "sub_code": "808110",
+      "sub_name": "资产减值准备",
+      "sub_name_raw": "附注_资产减值准备",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS8",
+      "cas_name": "资产减值",
+      "sub_code": "808120",
+      "sub_name": "资产减值损失",
+      "sub_name_raw": "附注_资产减值损失",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS8",
+      "cas_name": "资产减值",
+      "sub_code": "808130",
+      "sub_name": "信用减值损失",
+      "sub_name_raw": "附注_信用减值损失（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS9",
+      "cas_name": "职工薪酬",
+      "sub_code": "809100",
+      "sub_name": "应付职工薪酬",
+      "sub_name_raw": "附注_应付职工薪酬（一）",
+      "metric_code": "payroll_payable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS9",
+      "cas_name": "职工薪酬",
+      "sub_code": "809200",
+      "sub_name": "应付职工薪酬",
+      "sub_name_raw": "附注_应付职工薪酬（二）",
+      "metric_code": "payroll_payable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS10",
+      "cas_name": "企业年金基金",
+      "sub_code": "710100",
+      "sub_name": "资产负债表_企业年金基金",
+      "sub_name_raw": "资产负债表_企业年金基金",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS10",
+      "cas_name": "企业年金基金",
+      "sub_code": "710110",
+      "sub_name": "企业年金基金净资产变动表",
+      "sub_name_raw": "企业年金基金净资产变动表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS10",
+      "cas_name": "企业年金基金",
+      "sub_code": "710120",
+      "sub_name": "企业年金基金",
+      "sub_name_raw": "附注_企业年金基金",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS11",
+      "cas_name": "股份支付",
+      "sub_code": "811100",
+      "sub_name": "股份支付",
+      "sub_name_raw": "附注_股份支付",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS12",
+      "cas_name": "债务重组",
+      "sub_code": "812100",
+      "sub_name": "债务重组",
+      "sub_name_raw": "附注_债务重组",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS13",
+      "cas_name": "或有事项",
+      "sub_code": "813100",
+      "sub_name": "或有事项及承诺事项",
+      "sub_name_raw": "附注_或有事项及承诺事项",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS14",
+      "cas_name": "收入",
+      "sub_code": "814100",
+      "sub_name": "收入",
+      "sub_name_raw": "附注_收入",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS15",
+      "cas_name": "建造合同",
+      "sub_code": "815100",
+      "sub_name": "建造合同",
+      "sub_name_raw": "附注_建造合同",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS16",
+      "cas_name": "政府补助",
+      "sub_code": "816100",
+      "sub_name": "政府补助",
+      "sub_name_raw": "附注_政府补助",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS17",
+      "cas_name": "借款费用",
+      "sub_code": "817100",
+      "sub_name": "借款费用",
+      "sub_name_raw": "附注_借款费用",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS18",
+      "cas_name": "所得税",
+      "sub_code": "818200",
+      "sub_name": "所得税",
+      "sub_name_raw": "附注_所得税",
+      "metric_code": "income_tax",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS19",
+      "cas_name": "外币折算",
+      "sub_code": "819100",
+      "sub_name": "外币折算",
+      "sub_name_raw": "附注_外币折算",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS20",
+      "cas_name": "企业合并",
+      "sub_code": "820100",
+      "sub_name": "企业合并",
+      "sub_name_raw": "附注_企业合并",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS21",
+      "cas_name": "租赁",
+      "sub_code": "821100",
+      "sub_name": "租赁",
+      "sub_name_raw": "附注_租赁",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS21",
+      "cas_name": "租赁",
+      "sub_code": "821110",
+      "sub_name": "使用权资产",
+      "sub_name_raw": "附注_使用权资产（已执行新准则）",
+      "metric_code": "right_of_use_assets",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS26",
+      "cas_name": "再保险合同",
+      "sub_code": "826100",
+      "sub_name": "保险公司合并财务报表",
+      "sub_name_raw": "附注_保险公司合并财务报表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS27",
+      "cas_name": "石油天然气开采",
+      "sub_code": "827100",
+      "sub_name": "油气资产",
+      "sub_name_raw": "附注_油气资产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS28",
+      "cas_name": "会计政策、会计估计变更和差错更正",
+      "sub_code": "828700",
+      "sub_name": "会计政策、会计估计变更和差错更正",
+      "sub_name_raw": "附注_会计政策、会计估计变更和差错更正",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS29",
+      "cas_name": "资产负债表日后事项",
+      "sub_code": "829100",
+      "sub_name": "资产负债表日后事项",
+      "sub_name_raw": "附注_资产负债表日后事项",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "130000",
+      "sub_name": "财务报表一般信息",
+      "sub_name_raw": "财务报表一般信息",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "230005",
+      "sub_name": "个别资产负债表",
+      "sub_name_raw": "个别资产负债表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "330005",
+      "sub_name": "个别利润表",
+      "sub_name_raw": "个别利润表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "530005",
+      "sub_name": "个别所有者权益变动表",
+      "sub_name_raw": "个别所有者权益变动表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "230105",
+      "sub_name": "个别资产负债表_商业银行",
+      "sub_name_raw": "个别资产负债表_商业银行",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "330105",
+      "sub_name": "个别利润表_商业银行",
+      "sub_name_raw": "个别利润表_商业银行",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "530105",
+      "sub_name": "个别所有者权益变动表_商业银行",
+      "sub_name_raw": "个别所有者权益变动表_商业银行",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830100",
+      "sub_name": "重要会计政策和会计估计",
+      "sub_name_raw": "重要会计政策和会计估计",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830110",
+      "sub_name": "财务报表编制基础",
+      "sub_name_raw": "财务报表编制基础",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830120",
+      "sub_name": "遵循企业会计准则的声明",
+      "sub_name_raw": "遵循企业会计准则的声明",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830130",
+      "sub_name": "税项",
+      "sub_name_raw": "税项",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "330205",
+      "sub_name": "个别利润表_证券公司",
+      "sub_name_raw": "个别利润表_证券公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "530205",
+      "sub_name": "个别所有者权益变动表_证券公司",
+      "sub_name_raw": "个别所有者权益变动表_证券公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "230225",
+      "sub_name": "个别资产负债表_证券公司",
+      "sub_name_raw": "个别资产负债表_证券公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830220",
+      "sub_name": "一年内到期的非流动资产",
+      "sub_name_raw": "附注_一年内到期的非流动资产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830230",
+      "sub_name": "其他流动资产",
+      "sub_name_raw": "附注_其他流动资产",
+      "metric_code": "other_current_assets",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830240",
+      "sub_name": "在建工程",
+      "sub_name_raw": "附注_在建工程",
+      "metric_code": "construction_in_progress",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830260",
+      "sub_name": "商誉",
+      "sub_name_raw": "附注_商誉",
+      "metric_code": "goodwill",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830270",
+      "sub_name": "长期待摊费用",
+      "sub_name_raw": "附注_长期待摊费用",
+      "metric_code": "long_term_prepaid_expenses",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830280",
+      "sub_name": "其他非流动资产",
+      "sub_name_raw": "附注_其他非流动资产",
+      "metric_code": "other_noncurrent_assets",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830290",
+      "sub_name": "所有权受限制的资产",
+      "sub_name_raw": "附注_所有权受限制的资产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830300",
+      "sub_name": "应交税费",
+      "sub_name_raw": "附注_应交税费",
+      "metric_code": "taxes_payable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830320",
+      "sub_name": "其他流动负债",
+      "sub_name_raw": "附注_其他流动负债",
+      "metric_code": "other_current_liabilities",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "230335",
+      "sub_name": "个别资产负债表_保险公司",
+      "sub_name_raw": "个别资产负债表_保险公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "330335",
+      "sub_name": "个别利润表_保险公司",
+      "sub_name_raw": "个别利润表_保险公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "530335",
+      "sub_name": "个别所有者权益变动表_保险公司",
+      "sub_name_raw": "个别所有者权益变动表_保险公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830330",
+      "sub_name": "其他非流动负债",
+      "sub_name_raw": "附注_其他非流动负债",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830340",
+      "sub_name": "实收资本或股本",
+      "sub_name_raw": "附注_实收资本或股本",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830350",
+      "sub_name": "其他权益工具",
+      "sub_name_raw": "附注_其他权益工具",
+      "metric_code": "other_equity_instruments",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830360",
+      "sub_name": "资本公积",
+      "sub_name_raw": "附注_资本公积",
+      "metric_code": "capital_reserve",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830370",
+      "sub_name": "库存股",
+      "sub_name_raw": "附注_库存股",
+      "metric_code": "treasury_stock",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830380",
+      "sub_name": "专项储备",
+      "sub_name_raw": "附注_专项储备",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830390",
+      "sub_name": "盈余公积",
+      "sub_name_raw": "附注_盈余公积",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830400",
+      "sub_name": "未分配利润",
+      "sub_name_raw": "附注_未分配利润",
+      "metric_code": "retained_earnings",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830410",
+      "sub_name": "少数股东权益",
+      "sub_name_raw": "附注_少数股东权益",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830420",
+      "sub_name": "营业收入及营业成本",
+      "sub_name_raw": "附注_营业收入及营业成本",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830430",
+      "sub_name": "税金及附加",
+      "sub_name_raw": "附注_税金及附加",
+      "metric_code": "taxes_and_surcharges",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "230445",
+      "sub_name": "个别资产负债表_金融企业",
+      "sub_name_raw": "个别资产负债表_金融企业（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "330445",
+      "sub_name": "个别利润表_金融企业",
+      "sub_name_raw": "个别利润表_金融企业（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "530445",
+      "sub_name": "个别所有者权益变动表_金融企业",
+      "sub_name_raw": "个别所有者权益变动表_金融企业（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830440",
+      "sub_name": "销售费用、管理费用、研发费用及财务费用",
+      "sub_name_raw": "附注_销售费用、管理费用、研发费用及财务费用",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830450",
+      "sub_name": "公允价值变动收益",
+      "sub_name_raw": "附注_公允价值变动收益（披露形式一）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830460",
+      "sub_name": "投资收益",
+      "sub_name_raw": "附注_投资收益",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830470",
+      "sub_name": "营业外收入",
+      "sub_name_raw": "附注_营业外收入",
+      "metric_code": "non_operating_income",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830480",
+      "sub_name": "营业外支出",
+      "sub_name_raw": "附注_营业外支出",
+      "metric_code": "non_operating_expense",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830490",
+      "sub_name": "其他综合收益",
+      "sub_name_raw": "附注_其他综合收益",
+      "metric_code": "other_comprehensive_income",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830500",
+      "sub_name": "终止经营",
+      "sub_name_raw": "附注_终止经营",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830510",
+      "sub_name": "财务报表的批准报出",
+      "sub_name_raw": "财务报表的批准报出",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830520",
+      "sub_name": "利润表补充资料",
+      "sub_name_raw": "附注_利润表补充资料（费用按性质披露）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830530",
+      "sub_name": "管理资本的目标、政策及程序",
+      "sub_name_raw": "附注_管理资本的目标、政策及程序",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830540",
+      "sub_name": "资产处置收益",
+      "sub_name_raw": "附注_资产处置收益",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830550",
+      "sub_name": "其他收益",
+      "sub_name_raw": "附注_其他收益",
+      "metric_code": "other_income",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830600",
+      "sub_name": "商业银行合并财务报表",
+      "sub_name_raw": "附注_商业银行合并财务报表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS30",
+      "cas_name": "财务报表列报",
+      "sub_code": "830700",
+      "sub_name": "证券公司合并财务报表",
+      "sub_name_raw": "附注_证券公司合并财务报表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS31",
+      "cas_name": "现金流量表",
+      "sub_code": "431005",
+      "sub_name": "个别现金流量表",
+      "sub_name_raw": "个别现金流量表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS31",
+      "cas_name": "现金流量表",
+      "sub_code": "431105",
+      "sub_name": "个别现金流量表_商业银行",
+      "sub_name_raw": "个别现金流量表_商业银行",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS31",
+      "cas_name": "现金流量表",
+      "sub_code": "431205",
+      "sub_name": "个别现金流量表_证券公司",
+      "sub_name_raw": "个别现金流量表_证券公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS31",
+      "cas_name": "现金流量表",
+      "sub_code": "431335",
+      "sub_name": "个别现金流量表_保险公司",
+      "sub_name_raw": "个别现金流量表_保险公司",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS31",
+      "cas_name": "现金流量表",
+      "sub_code": "431445",
+      "sub_name": "个别现金流量表_金融企业",
+      "sub_name_raw": "个别现金流量表_金融企业（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS31",
+      "cas_name": "现金流量表",
+      "sub_code": "831600",
+      "sub_name": "现金流量表补充资料",
+      "sub_name_raw": "附注_现金流量表补充资料",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS33",
+      "cas_name": "合并财务报表",
+      "sub_code": "233000",
+      "sub_name": "合并资产负债表",
+      "sub_name_raw": "合并资产负债表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS33",
+      "cas_name": "合并财务报表",
+      "sub_code": "333000",
+      "sub_name": "合并利润表",
+      "sub_name_raw": "合并利润表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS33",
+      "cas_name": "合并财务报表",
+      "sub_code": "433000",
+      "sub_name": "合并现金流量表",
+      "sub_name_raw": "合并现金流量表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS33",
+      "cas_name": "合并财务报表",
+      "sub_code": "533000",
+      "sub_name": "合并所有者权益变动表",
+      "sub_name_raw": "合并所有者权益变动表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS34",
+      "cas_name": "每股收益",
+      "sub_code": "834600",
+      "sub_name": "每股收益",
+      "sub_name_raw": "附注_每股收益",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS35",
+      "cas_name": "分部报告",
+      "sub_code": "835600",
+      "sub_name": "分部报告",
+      "sub_name_raw": "附注_分部报告",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS36",
+      "cas_name": "关联方披露",
+      "sub_code": "836600",
+      "sub_name": "关联方关系及其交易",
+      "sub_name_raw": "附注_关联方关系及其交易",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837000",
+      "sub_name": "金融工具及其风险",
+      "sub_name_raw": "附注_金融工具及其风险",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837100",
+      "sub_name": "金融资产转移",
+      "sub_name_raw": "附注_金融资产转移（含资产证券化）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837200",
+      "sub_name": "货币资金",
+      "sub_name_raw": "附注_货币资金",
+      "metric_code": "cash_and_cash_equivalents",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837210",
+      "sub_name": "以公允价值计量且其变动计入当期损益的金融资产",
+      "sub_name_raw": "附注_以公允价值计量且其变动计入当期损益的金融资产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837220",
+      "sub_name": "应收票据",
+      "sub_name_raw": "附注_应收票据",
+      "metric_code": "notes_receivable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837230",
+      "sub_name": "应收账款",
+      "sub_name_raw": "附注_应收账款",
+      "metric_code": "accounts_receivable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837240",
+      "sub_name": "预付款项",
+      "sub_name_raw": "附注_预付款项",
+      "metric_code": "prepayments",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837250",
+      "sub_name": "应收款项融资",
+      "sub_name_raw": "附注_应收款项融资（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837260",
+      "sub_name": "其他应收款",
+      "sub_name_raw": "附注_其他应收款",
+      "metric_code": "other_receivables",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837270",
+      "sub_name": "合同资产",
+      "sub_name_raw": "附注_合同资产（已执行新准则）",
+      "metric_code": "contract_assets",
+      "mapping_method": "override",
+      "confidence": 1.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837280",
+      "sub_name": "可供出售金融资产",
+      "sub_name_raw": "附注_可供出售金融资产",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837290",
+      "sub_name": "债权投资",
+      "sub_name_raw": "附注_债权投资（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837300",
+      "sub_name": "持有至到期投资",
+      "sub_name_raw": "附注_持有至到期投资",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837310",
+      "sub_name": "其他债权投资",
+      "sub_name_raw": "附注_其他债权投资（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837320",
+      "sub_name": "长期应收款",
+      "sub_name_raw": "附注_长期应收款",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837330",
+      "sub_name": "其他权益工具投资",
+      "sub_name_raw": "附注_其他权益工具投资（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837340",
+      "sub_name": "其他非流动金融资产",
+      "sub_name_raw": "附注_其他非流动金融资产（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837350",
+      "sub_name": "以公允价值计量且其变动计入当期损益的金融负债",
+      "sub_name_raw": "附注_以公允价值计量且其变动计入当期损益的金融负债",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837360",
+      "sub_name": "应付票据",
+      "sub_name_raw": "附注_应付票据",
+      "metric_code": "notes_payable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837370",
+      "sub_name": "短期借款",
+      "sub_name_raw": "附注_短期借款",
+      "metric_code": "short_term_borrowings",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837380",
+      "sub_name": "应付账款",
+      "sub_name_raw": "附注_应付账款",
+      "metric_code": "accounts_payable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837390",
+      "sub_name": "预收款项",
+      "sub_name_raw": "附注_预收款项",
+      "metric_code": "contract_liabilities",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837400",
+      "sub_name": "合同负债",
+      "sub_name_raw": "附注_合同负债（已执行新准则）",
+      "metric_code": "contract_liabilities",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837410",
+      "sub_name": "其他应付款",
+      "sub_name_raw": "附注_其他应付款",
+      "metric_code": "other_payables",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837420",
+      "sub_name": "一年内到期的非流动负债",
+      "sub_name_raw": "附注_一年内到期的非流动负债",
+      "metric_code": "current_portion_noncurrent_liabilities",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837430",
+      "sub_name": "长期借款",
+      "sub_name_raw": "附注_长期借款",
+      "metric_code": "long_term_borrowings",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837440",
+      "sub_name": "应付债券",
+      "sub_name_raw": "附注_应付债券",
+      "metric_code": "bonds_payable",
+      "mapping_method": "unique_name",
+      "confidence": 0.9
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837450",
+      "sub_name": "长期应付款",
+      "sub_name_raw": "附注_长期应付款",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS37",
+      "cas_name": "金融工具列报",
+      "sub_code": "837460",
+      "sub_name": "租赁负债",
+      "sub_name_raw": "附注_租赁负债（已执行新准则）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS38",
+      "cas_name": "首次执行企业会计准则",
+      "sub_code": "838100",
+      "sub_name": "首次执行企业会计准则",
+      "sub_name_raw": "附注_首次执行企业会计准则",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS39",
+      "cas_name": "公允价值计量",
+      "sub_code": "839100",
+      "sub_name": "公允价值计量",
+      "sub_name_raw": "附注_公允价值计量（一）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS39",
+      "cas_name": "公允价值计量",
+      "sub_code": "839200",
+      "sub_name": "公允价值计量",
+      "sub_name_raw": "附注_公允价值计量（二）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS41",
+      "cas_name": "在其他主体中权益的披露",
+      "sub_code": "841100",
+      "sub_name": "在其他主体中权益的披露",
+      "sub_name_raw": "附注_在其他主体中权益的披露（一）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS41",
+      "cas_name": "在其他主体中权益的披露",
+      "sub_code": "841200",
+      "sub_name": "在其他主体中权益的披露",
+      "sub_name_raw": "附注_在其他主体中权益的披露（二）",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS42",
+      "cas_name": "持有待售的非流动资产、处置组和终止经营",
+      "sub_code": "842000",
+      "sub_name": "持有待售的非流动资产或处置组",
+      "sub_name_raw": "附注_持有待售的非流动资产或处置组",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS42",
+      "cas_name": "持有待售的非流动资产、处置组和终止经营",
+      "sub_code": "901000",
+      "sub_name": "维度_追溯应用和追溯重述",
+      "sub_name_raw": "维度_追溯应用和追溯重述",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS42",
+      "cas_name": "持有待售的非流动资产、处置组和终止经营",
+      "sub_code": "902000",
+      "sub_name": "维度_创建日期",
+      "sub_name_raw": "维度_创建日期",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    },
+    {
+      "cas_code": "CAS42",
+      "cas_name": "持有待售的非流动资产、处置组和终止经营",
+      "sub_code": "904000",
+      "sub_name": "维度_合并和个别财务报表",
+      "sub_name_raw": "维度_合并和个别财务报表",
+      "metric_code": null,
+      "mapping_method": "unmapped",
+      "confidence": 0.0
+    }
+  ]
+}

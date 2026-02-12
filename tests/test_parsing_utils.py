@@ -4,12 +4,14 @@ from datetime import date
 from decimal import Decimal
 
 from app.ingest.financial_report import (
+    _build_mineru_env,
     _extract_numbers,
     _strip_numbers,
     _detect_units,
     _parse_date_from_text,
     _guess_column_labels,
 )
+from app.ingest import financial_report as fr
 
 
 def test_extract_numbers_parses_commas_and_parentheses() -> None:
@@ -39,3 +41,29 @@ def test_guess_column_labels_years() -> None:
     cols = _guess_column_labels(["For 2024 and 2023"], 2)
     labels = [c.label for c in cols]
     assert labels == ["2024", "2023"]
+
+
+def test_detect_statement_type_from_elr_code(monkeypatch) -> None:
+    monkeypatch.setattr(fr, "ELR_STATEMENT_MAP", {"230005a": "balance_sheet"})
+    assert fr._detect_statement_type("ELR [230005a]") == "balance_sheet"
+
+
+def test_mineru_content_list_unknown_type_filtered(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(fr, "KNOWN_ELEMENT_TYPES", {"text", "table"})
+    content_path = tmp_path / "content.json"
+    content_path.write_text(
+        '[{"page_idx": 0, "type": "foo", "text": "x"}, {"page_idx": 0, "type": "text", "text": "ok"}]',
+        encoding="utf-8",
+    )
+    pages = fr._mineru_pages_from_content_list(content_path)
+    assert len(pages) == 1
+    assert "ok" in pages[0].text_md
+
+
+def test_build_mineru_env_uses_tmp_cache() -> None:
+    env = _build_mineru_env()
+    assert env["XDG_CACHE_HOME"] == "/tmp"
+    assert env["HF_HOME"] == "/tmp"
+    assert env["HUGGINGFACE_HUB_CACHE"] == "/tmp"
+    assert env["TRANSFORMERS_CACHE"] == "/tmp"
+    assert env["MPLCONFIGDIR"] == "/tmp/mplconfig"

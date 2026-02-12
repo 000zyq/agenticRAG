@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import re
 from datetime import datetime, date
 import json
 from pathlib import Path
@@ -11,7 +13,13 @@ from app.ingest.metric_defs import (
     match_metric,
     metric_code_from_label,
 )
-from app.storage.db import get_conn
+
+
+def _get_conn():
+    # Keep DB dependency lazy so utility-only imports can run in minimal CI env.
+    from app.storage.db import get_conn
+
+    return get_conn()
 
 
 def _record_error(
@@ -22,7 +30,7 @@ def _record_error(
     exc: Exception,
 ) -> None:
     try:
-        with get_conn() as conn:
+        with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -50,7 +58,23 @@ STATEMENT_TYPE_MAP = {
     "balance_sheet": "balance",
     "income_statement": "income",
     "cash_flow": "cashflow",
+    "balance": "balance",
+    "income": "income",
+    "cashflow": "cashflow",
 }
+CORE_STATEMENT_TYPES = {"balance_sheet", "income_statement", "cash_flow"}
+CORE_STATEMENT_TITLE_RE = re.compile(r"(资产负债表|利润表|损益表|现金流量表)")
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
+CORE_STATEMENTS_ONLY = _env_bool("INGEST_CORE_STATEMENTS_ONLY", True)
+MIN_METRIC_ROWS_PER_TABLE = int(os.getenv("MIN_METRIC_ROWS_PER_TABLE", "2"))
 
 
 def _match_metric(label: str, statement_type: str) -> dict | None:
@@ -162,20 +186,73 @@ def _consolidation_scope(is_consolidated: bool | None) -> str | None:
     return None
 
 
+def _mineru_output_summary(parse_method: str, source_path: Path) -> dict:
+    if parse_method != "mineru":
+        return {}
+    output_override = os.getenv("MINERU_OUTPUT_DIR")
+    if not output_override:
+        return {}
+
+    output_root = Path(output_override).expanduser()
+    try:
+        output_root = output_root.resolve()
+    except OSError:
+        pass
+
+    report_dir = output_root / source_path.stem
+    summary = {
+        "mineru_output_dir": str(output_root),
+        "mineru_output_report_dir": str(report_dir),
+    }
+    search_roots = [report_dir, output_root] if report_dir != output_root else [output_root]
+    for root in search_roots:
+        if not root.exists():
+            continue
+        candidates = sorted(root.rglob("*_content_list.json"))
+        if candidates:
+            summary["mineru_content_list_path"] = str(candidates[0])
+            break
+    return summary
+
+
+def _is_core_statement_table(table) -> bool:
+    statement_type = (table.statement_type or "").strip()
+    if statement_type in CORE_STATEMENT_TYPES:
+        return True
+    title_text = f"{table.title or ''} {table.section_title or ''}"
+    return bool(CORE_STATEMENT_TITLE_RE.search(title_text))
+
+
 def _insert_facts_for_table(
     cur,
     report_id: int,
+    version_id: int | None,
     meta,
     table,
     table_id: int | None,
     row_ids: list[int] | None,
     now: datetime,
     metric_cache: dict[str, int],
+    write_facts: bool = True,
 ) -> tuple[int, int]:
+    if CORE_STATEMENTS_ONLY and not _is_core_statement_table(table):
+        return 0, 0
+
     mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
-    if not mapped_statement:
+    matched_rows = 0
+    if mapped_statement:
+        matched_rows = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
+        if matched_rows == 0:
+            inferred = infer_statement_type_from_rows(table.rows)
+            if inferred:
+                mapped_statement = inferred
+    else:
         mapped_statement = infer_statement_type_from_rows(table.rows)
     if not mapped_statement:
+        return 0, 0
+    if matched_rows == 0:
+        matched_rows = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
+    if matched_rows < MIN_METRIC_ROWS_PER_TABLE:
         return 0, 0
 
     flow_fact_count = 0
@@ -185,6 +262,15 @@ def _insert_facts_for_table(
     consolidation_scope = _consolidation_scope(table.is_consolidated)
 
     for row_idx, row in enumerate(table.rows):
+        label = row.label or ""
+        if label in {"(blank)", ""}:
+            continue
+        if len(label) > 60:
+            continue
+        if "。" in label or "，" in label:
+            continue
+        if "公司" in label and len(label) > 30:
+            continue
         metric_def = _match_metric(row.label, mapped_statement)
         metric_id = _get_or_create_metric(
             cur,
@@ -228,14 +314,16 @@ def _insert_facts_for_table(
             if mapped_statement == "balance":
                 cur.execute(
                     """
-                    INSERT INTO financial_stock_fact (
-                        report_id, metric_id, as_of_date, value, unit, currency,
+                    INSERT INTO financial_stock_candidate (
+                        report_id, version_id, metric_id, as_of_date, value, unit, currency,
                         consolidation_scope, source_trace_id, quality_score, created_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING candidate_id
                     """,
                     (
                         report_id,
+                        version_id,
                         metric_id,
                         period_end,
                         cell.value,
@@ -247,18 +335,47 @@ def _insert_facts_for_table(
                         now,
                     ),
                 )
-                stock_fact_count += 1
+                candidate_id = int(cur.fetchone()[0])
+                if write_facts:
+                    cur.execute(
+                        """
+                        INSERT INTO financial_stock_fact (
+                            report_id, metric_id, as_of_date, value, unit, currency,
+                            consolidation_scope, source_trace_id, quality_score, created_at,
+                            selected_candidate_id, resolution_status, resolution_method
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            report_id,
+                            metric_id,
+                            period_end,
+                            cell.value,
+                            table_units,
+                            table_currency,
+                            consolidation_scope,
+                            trace_id,
+                            None,
+                            now,
+                            candidate_id,
+                            "auto",
+                            "single_engine",
+                        ),
+                    )
+                    stock_fact_count += 1
             else:
                 cur.execute(
                     """
-                    INSERT INTO financial_flow_fact (
-                        report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                    INSERT INTO financial_flow_candidate (
+                        report_id, version_id, metric_id, period_start_date, period_end_date, value, unit, currency,
                         consolidation_scope, audit_flag, source_trace_id, quality_score, created_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING candidate_id
                     """,
                     (
                         report_id,
+                        version_id,
                         metric_id,
                         period_start,
                         period_end,
@@ -272,20 +389,60 @@ def _insert_facts_for_table(
                         now,
                     ),
                 )
-                flow_fact_count += 1
+                candidate_id = int(cur.fetchone()[0])
+                if write_facts:
+                    cur.execute(
+                        """
+                        INSERT INTO financial_flow_fact (
+                            report_id, metric_id, period_start_date, period_end_date, value, unit, currency,
+                            consolidation_scope, audit_flag, source_trace_id, quality_score, created_at,
+                            selected_candidate_id, resolution_status, resolution_method
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            report_id,
+                            metric_id,
+                            period_start,
+                            period_end,
+                            cell.value,
+                            table_units,
+                            table_currency,
+                            consolidation_scope,
+                            None,
+                            trace_id,
+                            None,
+                            now,
+                            candidate_id,
+                            "auto",
+                            "single_engine",
+                        ),
+                    )
+                    flow_fact_count += 1
 
     return flow_fact_count, stock_fact_count
 
 
-def insert_report(path: Path, recompute_facts: bool = False) -> int:
+def insert_report(
+    path: Path,
+    recompute_facts: bool = False,
+    parse_method_override: str | None = None,
+    candidates_only: bool = False,
+    allow_existing: bool = False,
+    write_pages: bool = False,
+    engine: str | None = None,
+) -> int:
     source_hash = sha256_file(path)
     now = datetime.utcnow()
 
     try:
-        pages, meta, tables, parse_method = extract_financial_report(str(path))
+        pages, meta, tables, parse_method = extract_financial_report(str(path), engine=engine)
     except Exception as exc:
         _record_error(path, None, None, "parse", exc)
         raise
+
+    if parse_method_override:
+        parse_method = parse_method_override
 
     currency_status = "detected" if meta.currency else "missing"
     units_status = "detected" if meta.units else "missing"
@@ -295,15 +452,19 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
     report_id: int | None = None
     version_id: int | None = None
     stage = "init"
+    mineru_summary = _mineru_output_summary(parse_method, path)
 
     try:
-        with get_conn() as conn:
+        with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT report_id FROM financial_reports WHERE source_hash = %s", (source_hash,))
                 existing = cur.fetchone()
                 if existing:
                     report_id = int(existing[0])
-                    if not recompute_facts:
+                    if not recompute_facts and not allow_existing:
+                        summary = {"reason": "duplicate"}
+                        if mineru_summary:
+                            summary.update(mineru_summary)
                         cur.execute(
                             """
                             INSERT INTO report_versions (
@@ -311,8 +472,87 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                             )
                             VALUES (%s, %s, %s, %s, %s, %s, %s)
                             """,
-                            (report_id, parse_method, "v1", now, now, "skipped", json.dumps({"reason": "duplicate"})),
+                            (report_id, parse_method, "v1", now, now, "skipped", json.dumps(summary)),
                         )
+                        conn.commit()
+                        return report_id
+
+                    if allow_existing and not recompute_facts:
+                        cur.execute(
+                            """
+                            INSERT INTO report_versions (
+                                report_id, parse_method, parser_version, started_at, status
+                            )
+                            VALUES (%s, %s, %s, %s, %s)
+                            RETURNING version_id
+                            """,
+                            (report_id, parse_method, "v1", now, "running"),
+                        )
+                        version_id = int(cur.fetchone()[0])
+
+                        if write_pages:
+                            stage = "append_pages"
+                            page_rows = [
+                                (report_id, page.page, page.text_md, page.text_raw, now)
+                                for page in pages
+                            ]
+                            cur.executemany(
+                                """
+                                INSERT INTO report_pages (report_id, page_number, text_md, text_raw, created_at)
+                                VALUES (%s, %s, %s, %s, %s)
+                                ON CONFLICT (report_id, page_number)
+                                DO UPDATE SET
+                                    text_md = EXCLUDED.text_md,
+                                    text_raw = EXCLUDED.text_raw,
+                                    created_at = EXCLUDED.created_at
+                                WHERE report_pages.text_md IS NULL OR report_pages.text_md NOT LIKE '%%<table%%'
+                                """,
+                                page_rows,
+                            )
+                            cur.execute(
+                                "UPDATE report_pages SET tsv = to_tsvector('simple', coalesce(text_md, '')) WHERE report_id = %s",
+                                (report_id,),
+                            )
+
+                        stage = "append_candidates"
+                        metric_cache: dict[str, int] = {}
+                        flow_fact_count = 0
+                        stock_fact_count = 0
+                        for table in tables:
+                            flow_inc, stock_inc = _insert_facts_for_table(
+                                cur,
+                                report_id,
+                                version_id,
+                                meta,
+                                table,
+                                None,
+                                None,
+                                now,
+                                metric_cache,
+                                write_facts=False,
+                            )
+                            flow_fact_count += flow_inc
+                            stock_fact_count += stock_inc
+
+                        finished = datetime.utcnow()
+                        summary = {
+                            "flow_facts": flow_fact_count,
+                            "stock_facts": stock_fact_count,
+                            "mode": "append_candidates",
+                        }
+                        if write_pages:
+                            summary["pages_written"] = len(pages)
+                        if mineru_summary:
+                            summary.update(mineru_summary)
+                        cur.execute(
+                            """
+                            UPDATE report_versions
+                            SET finished_at = %s, status = %s, summary_json = %s
+                            WHERE version_id = %s
+                            """,
+                            (finished, "ready", json.dumps(summary), version_id),
+                        )
+
                         conn.commit()
                         return report_id
 
@@ -331,6 +571,8 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                     stage = "recompute_facts_cleanup"
                     cur.execute("DELETE FROM financial_flow_fact WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM financial_stock_fact WHERE report_id = %s", (report_id,))
+                    cur.execute("DELETE FROM financial_flow_candidate WHERE report_id = %s", (report_id,))
+                    cur.execute("DELETE FROM financial_stock_candidate WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM source_trace WHERE report_id = %s", (report_id,))
 
                     stage = "recompute_facts_insert"
@@ -347,12 +589,14 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                         flow_inc, stock_inc = _insert_facts_for_table(
                             cur,
                             report_id,
+                            version_id,
                             meta,
                             table,
                             table_id,
                             row_ids,
                             now,
                             metric_cache,
+                            write_facts=not candidates_only,
                         )
                         flow_fact_count += flow_inc
                         stock_fact_count += stock_inc
@@ -363,6 +607,8 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                         "stock_facts": stock_fact_count,
                         "mode": "recompute_facts",
                     }
+                    if mineru_summary:
+                        summary.update(mineru_summary)
                     cur.execute(
                         """
                         UPDATE report_versions
@@ -547,12 +793,14 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                     flow_inc, stock_inc = _insert_facts_for_table(
                         cur,
                         report_id,
+                        version_id,
                         meta,
                         table,
                         table_id,
                         row_ids,
                         now,
                         metric_cache,
+                        write_facts=not candidates_only,
                     )
                     flow_fact_count += flow_inc
                     stock_fact_count += stock_inc
@@ -566,6 +814,8 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
                     "flow_facts": flow_fact_count,
                     "stock_facts": stock_fact_count,
                 }
+                if mineru_summary:
+                    summary.update(mineru_summary)
                 cur.execute(
                     """
                     UPDATE report_versions
@@ -581,7 +831,7 @@ def insert_report(path: Path, recompute_facts: bool = False) -> int:
         _record_error(path, report_id, None, stage, exc)
         if version_id is not None:
             try:
-                with get_conn() as conn:
+                with _get_conn() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
                             "UPDATE report_versions SET finished_at = %s, status = %s WHERE version_id = %s",
@@ -597,13 +847,38 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest financial report PDF into Postgres.")
     parser.add_argument("path", nargs="?", default="tmp/ingest/2024年报.pdf", help="Path to report PDF")
     parser.add_argument("--recompute-facts", action="store_true", help="Recompute facts for existing report")
+    parser.add_argument("--parse-method", help="Override parse method label stored in report_versions")
+    parser.add_argument(
+        "--candidates-only",
+        action="store_true",
+        help="Only insert candidate facts (skip canonical fact write).",
+    )
+    parser.add_argument(
+        "--allow-existing",
+        action="store_true",
+        help="Allow appending candidates for an existing report without recompute.",
+    )
+    parser.add_argument(
+        "--write-pages",
+        action="store_true",
+        help="Write or update report_pages when appending candidates for an existing report.",
+    )
+    parser.add_argument("--engine", choices=["auto", "pypdf", "mineru"], default="auto", help="Select parser engine.")
     args = parser.parse_args()
 
     path = Path(args.path)
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
 
-    report_id = insert_report(path, recompute_facts=args.recompute_facts)
+    report_id = insert_report(
+        path,
+        recompute_facts=args.recompute_facts,
+        parse_method_override=args.parse_method,
+        candidates_only=args.candidates_only,
+        allow_existing=args.allow_existing,
+        write_pages=args.write_pages,
+        engine=None if args.engine == "auto" else args.engine,
+    )
     print(f"report_id={report_id}")
 
 

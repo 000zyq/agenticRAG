@@ -97,6 +97,11 @@ def evaluate(manifest_path: Path) -> dict:
                 if mapped_statement:
                     if match_metric(row.label, mapped_statement):
                         metric_rows_matched += 1
+                    else:
+                        for st in ("income", "balance", "cashflow"):
+                            if match_metric(row.label, st):
+                                metric_rows_matched += 1
+                                break
                 else:
                     for st in ("income", "balance", "cashflow"):
                         if match_metric(row.label, st):
