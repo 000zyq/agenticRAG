@@ -6,6 +6,23 @@ from pathlib import Path
 import re
 
 
+SHORT_PATTERN_MAX = 2
+SHORT_CN_DENYLIST = {
+    "资产",
+    "负债",
+    "权益",
+    "现金",
+    "成本",
+    "费用",
+}
+
+
+def _normalize_label_impl(label: str) -> str:
+    cleaned = re.sub(r"[\s\u3000]+", "", label)
+    cleaned = re.sub(r"[：:（）()，,．.。;；、-]+", "", cleaned)
+    return cleaned.lower()
+
+
 BASE_METRIC_DEFS = [
     {
         "metric_code": "revenue",
@@ -782,6 +799,7 @@ BASE_METRIC_DEFS = [
 
 
 DICTIONARY_PATH = Path(__file__).resolve().parents[2] / "data" / "financial_dictionary.json"
+CAS2020_MAPPING_PATH = Path(__file__).resolve().parents[2] / "data" / "taxonomy" / "cas2020_metric_mapping.json"
 
 
 def _load_dictionary_file(path: Path) -> list[dict] | None:
@@ -810,6 +828,12 @@ def _load_dictionary_file(path: Path) -> list[dict] | None:
         value_nature = item.get("value_nature")
         if not metric_code or not metric_name_cn or not statement_type or not value_nature:
             continue
+        patterns = list(item.get("patterns") or item.get("patterns_cn") or [])
+        patterns_exact = list(item.get("patterns_exact") or item.get("patterns_cn_exact") or [])
+        patterns_en = list(item.get("patterns_en") or [])
+        patterns_en_exact = list(item.get("patterns_en_exact") or [])
+        patterns, patterns_exact = _normalize_pattern_buckets(patterns, patterns_exact, is_cn=True)
+        patterns_en, patterns_en_exact = _normalize_pattern_buckets(patterns_en, patterns_en_exact, is_cn=False)
         normalized.append(
             {
                 "metric_code": metric_code,
@@ -818,23 +842,93 @@ def _load_dictionary_file(path: Path) -> list[dict] | None:
                 "statement_type": statement_type,
                 "value_nature": value_nature,
                 "parent_metric_code": item.get("parent_metric_code"),
-                "patterns": list(item.get("patterns") or item.get("patterns_cn") or []),
-                "patterns_exact": list(item.get("patterns_exact") or item.get("patterns_cn_exact") or []),
-                "patterns_en": list(item.get("patterns_en") or []),
-                "patterns_en_exact": list(item.get("patterns_en_exact") or []),
+                "patterns": patterns,
+                "patterns_exact": patterns_exact,
+                "patterns_en": patterns_en,
+                "patterns_en_exact": patterns_en_exact,
             }
         )
 
     return normalized or None
 
 
+def _dedupe_keep_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _normalize_pattern_buckets(patterns: list[str], patterns_exact: list[str], is_cn: bool) -> tuple[list[str], list[str]]:
+    loose: list[str] = []
+    exact: list[str] = list(patterns_exact)
+    short_cn_deny_norm = {_normalize_label_impl(label) for label in SHORT_CN_DENYLIST}
+    for label in patterns:
+        norm = _normalize_label_impl(label)
+        if not norm:
+            continue
+        if is_cn and norm in short_cn_deny_norm:
+            # Generic short chinese labels are too ambiguous to keep.
+            continue
+        if len(norm) <= SHORT_PATTERN_MAX:
+            exact.append(label)
+            continue
+        loose.append(label)
+    return _dedupe_keep_order(loose), _dedupe_keep_order(exact)
+
+
 METRIC_DEFS = _load_dictionary_file(DICTIONARY_PATH) or BASE_METRIC_DEFS
 
 
 def normalize_label(label: str) -> str:
-    cleaned = re.sub(r"[\s\u3000]+", "", label)
-    cleaned = re.sub(r"[：:（）()，,．.。;；-]+", "", cleaned)
-    return cleaned.lower()
+    return _normalize_label_impl(label)
+
+
+def _load_cas2020_mapping(path: Path) -> dict[str, dict[str, list[str]]] | None:
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    records = data.get("records") if isinstance(data, dict) else None
+    if not isinstance(records, list):
+        return None
+
+    by_sub_code: dict[str, set[str]] = {}
+    by_sub_name: dict[str, set[str]] = {}
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        metric_code = str(item.get("metric_code") or "").strip()
+        if not metric_code:
+            continue
+        sub_code = str(item.get("sub_code") or "").strip()
+        if sub_code:
+            by_sub_code.setdefault(sub_code, set()).add(metric_code)
+        for key in ("sub_name", "sub_name_raw"):
+            sub_name = str(item.get(key) or "").strip()
+            if not sub_name:
+                continue
+            norm_sub_name = _normalize_label_impl(sub_name)
+            if norm_sub_name:
+                by_sub_name.setdefault(norm_sub_name, set()).add(metric_code)
+
+    return {
+        "by_sub_code": {k: sorted(v) for k, v in by_sub_code.items()},
+        "by_sub_name": {k: sorted(v) for k, v in by_sub_name.items()},
+    }
+
+
+METRIC_BY_CODE = {metric["metric_code"]: metric for metric in METRIC_DEFS}
+CAS2020_MAPPING = _load_cas2020_mapping(CAS2020_MAPPING_PATH)
+EXACT_LABEL_ALIASES = {
+    ("balance", normalize_label("资产合计")): "total_assets",
+}
 
 
 def metric_name_en_from_code(metric_code: str) -> str:
@@ -881,8 +975,83 @@ def _metric_exact_patterns(metric: dict) -> set[str]:
     return {normalize_label(pattern) for pattern in patterns}
 
 
+def _pattern_matches_label(norm_label: str, norm_pattern: str) -> bool:
+    if not norm_pattern:
+        return False
+    if norm_label == norm_pattern:
+        return True
+    # Avoid broad substring matches that collapse detailed rows into one metric.
+    if norm_label.startswith(norm_pattern):
+        suffix = norm_label[len(norm_pattern) :]
+        return suffix in {"合计", "小计", "净额", "总额", "余额"}
+    if norm_label.endswith(norm_pattern):
+        prefix = norm_label[: len(norm_label) - len(norm_pattern)]
+        return prefix in {"其中", "其中:", "其中：", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "加", "减"}
+    return False
+
+
+def _extract_sub_code(label: str) -> str | None:
+    match = re.search(r"[\[【]\s*(\d{6})\s*[\]】]", label)
+    if match:
+        return match.group(1)
+    match = re.match(r"\s*(\d{6})\D", label)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _label_candidates_for_mapping(label: str, sub_code: str | None) -> list[str]:
+    normalized = normalize_label(label)
+    candidates = [normalized]
+    if sub_code and normalized.startswith(sub_code):
+        candidates.append(normalized[len(sub_code) :])
+    deduped: list[str] = []
+    for candidate in candidates:
+        trimmed = candidate
+        while trimmed.startswith("附注"):
+            trimmed = trimmed[2:]
+        if trimmed and trimmed not in deduped:
+            deduped.append(trimmed)
+    return deduped
+
+
+def _pick_metric_from_codes(metric_codes: list[str], statement_type: str) -> dict | None:
+    exact_type: list[dict] = []
+    for metric_code in metric_codes:
+        metric = METRIC_BY_CODE.get(metric_code)
+        if metric and metric["statement_type"] == statement_type:
+            exact_type.append(metric)
+    if len(exact_type) == 1:
+        return exact_type[0]
+    return None
+
+
+def _match_metric_from_cas2020_mapping(label: str, statement_type: str) -> dict | None:
+    if not CAS2020_MAPPING:
+        return None
+    by_sub_code = CAS2020_MAPPING.get("by_sub_code", {})
+    by_sub_name = CAS2020_MAPPING.get("by_sub_name", {})
+
+    sub_code = _extract_sub_code(label)
+    if sub_code:
+        metric = _pick_metric_from_codes(by_sub_code.get(sub_code, []), statement_type)
+        if metric:
+            return metric
+
+    for candidate in _label_candidates_for_mapping(label, sub_code):
+        metric = _pick_metric_from_codes(by_sub_name.get(candidate, []), statement_type)
+        if metric:
+            return metric
+    return None
+
+
 def match_metric(label: str, statement_type: str) -> dict | None:
     norm_label = normalize_label(label)
+    alias_metric_code = EXACT_LABEL_ALIASES.get((statement_type, norm_label))
+    if alias_metric_code:
+        alias_metric = METRIC_BY_CODE.get(alias_metric_code)
+        if alias_metric:
+            return alias_metric
     label_has_ratio = ("率" in label) or ("%" in label)
     for metric in METRIC_DEFS:
         if metric["statement_type"] != statement_type:
@@ -895,8 +1064,11 @@ def match_metric(label: str, statement_type: str) -> dict | None:
                 return metric
         for pattern in _metric_patterns(metric):
             norm_pattern = normalize_label(pattern)
-            if norm_pattern in norm_label:
+            if _pattern_matches_label(norm_label, norm_pattern):
                 return metric
+    metric = _match_metric_from_cas2020_mapping(label, statement_type)
+    if metric:
+        return metric
     return None
 
 

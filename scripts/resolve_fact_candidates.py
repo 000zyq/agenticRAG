@@ -55,12 +55,22 @@ def _avg_quality(values: list[Decimal | None]) -> float:
     return sum(numeric) / len(numeric)
 
 
-def _choose_candidate(groups: dict[str, list], min_agree: int) -> tuple[object, int, int, str, str]:
+def _engine_key(candidate, version_to_engine: dict[int, str]) -> str:
+    if candidate.version_id is None:
+        return f"candidate_{candidate.candidate_id}"
+    return version_to_engine.get(candidate.version_id) or f"version_{candidate.version_id}"
+
+
+def _choose_candidate(
+    groups: dict[str, list],
+    min_agree: int,
+    version_to_engine: dict[int, str],
+) -> tuple[object, int, int, str, str]:
     ranked = []
     for value_key, candidates in groups.items():
-        version_ids = {c.version_id or c.candidate_id for c in candidates}
+        engine_ids = {_engine_key(c, version_to_engine) for c in candidates}
         quality = _avg_quality([c.quality_score for c in candidates])
-        ranked.append((len(version_ids), len(candidates), quality, value_key, candidates))
+        ranked.append((len(engine_ids), len(candidates), quality, value_key, candidates))
     ranked.sort(reverse=True)
     best = ranked[0]
     agree_count = best[0]
@@ -226,24 +236,25 @@ def _check_balance_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: D
         return []
     cur.execute(
         """
-        SELECT metric_id, as_of_date, value
+        SELECT metric_id, as_of_date, value, unit, currency, consolidation_scope
         FROM financial_stock_fact
         WHERE report_id = %s AND metric_id = ANY(%s)
         """,
         (report_id, list(metric_ids.values())),
     )
-    by_date: dict[object, dict[int, Decimal]] = defaultdict(dict)
-    for metric_id, as_of_date, value in cur.fetchall():
+    by_key: dict[tuple, dict[int, Decimal]] = defaultdict(dict)
+    for metric_id, as_of_date, value, unit, currency, scope in cur.fetchall():
         if value is None:
             continue
-        by_date[as_of_date][int(metric_id)] = value
+        key = (as_of_date, unit, currency, scope)
+        by_key[key][int(metric_id)] = value
 
     checks = []
     assets_id = metric_ids.get("total_assets")
     liabilities_id = metric_ids.get("total_liabilities")
     equity_id = metric_ids.get("total_equity") or metric_ids.get("total_equity_parent")
     liab_equity_id = metric_ids.get("total_liabilities_equity")
-    for as_of_date, values in by_date.items():
+    for (as_of_date, unit, currency, scope), values in by_key.items():
         assets = values.get(assets_id) if assets_id else None
         liabilities = values.get(liabilities_id) if liabilities_id else None
         equity = values.get(equity_id) if equity_id else None
@@ -254,6 +265,9 @@ def _check_balance_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: D
                 {
                     "name": "assets_eq_liab_plus_equity",
                     "as_of_date": str(as_of_date),
+                    "unit": unit,
+                    "currency": currency,
+                    "consolidation_scope": scope,
                     "lhs": float(assets),
                     "rhs": float(liabilities + equity),
                     "diff": float(diff),
@@ -266,6 +280,9 @@ def _check_balance_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: D
                 {
                     "name": "assets_eq_liab_equity_total",
                     "as_of_date": str(as_of_date),
+                    "unit": unit,
+                    "currency": currency,
+                    "consolidation_scope": scope,
                     "lhs": float(assets),
                     "rhs": float(liab_equity),
                     "diff": float(diff),
@@ -292,17 +309,18 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
 
     cur.execute(
         """
-        SELECT metric_id, period_end_date, value
+        SELECT metric_id, period_end_date, value, unit, currency, consolidation_scope
         FROM financial_flow_fact
         WHERE report_id = %s AND metric_id = ANY(%s)
         """,
         (report_id, list(metric_ids.values())),
     )
-    by_date: dict[object, dict[int, Decimal]] = defaultdict(dict)
-    for metric_id, period_end_date, value in cur.fetchall():
+    by_key: dict[tuple, dict[int, Decimal]] = defaultdict(dict)
+    for metric_id, period_end_date, value, unit, currency, scope in cur.fetchall():
         if value is None:
             continue
-        by_date[period_end_date][int(metric_id)] = value
+        key = (period_end_date, unit, currency, scope)
+        by_key[key][int(metric_id)] = value
 
     checks = []
     op_id = metric_ids.get("net_cash_flow_operating")
@@ -312,7 +330,7 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
     begin_id = metric_ids.get("cash_begin")
     end_id = metric_ids.get("cash_end")
 
-    for period_end, values in by_date.items():
+    for (period_end, unit, currency, scope), values in by_key.items():
         operating = values.get(op_id) if op_id else None
         investing = values.get(inv_id) if inv_id else None
         financing = values.get(fin_id) if fin_id else None
@@ -327,6 +345,9 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
                 {
                     "name": "net_increase_eq_sum_cashflows",
                     "period_end_date": str(period_end),
+                    "unit": unit,
+                    "currency": currency,
+                    "consolidation_scope": scope,
                     "lhs": float(net_increase),
                     "rhs": float(rhs),
                     "diff": float(diff),
@@ -341,6 +362,9 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
                 {
                     "name": "cash_end_eq_cash_begin_plus_increase",
                     "period_end_date": str(period_end),
+                    "unit": unit,
+                    "currency": currency,
+                    "consolidation_scope": scope,
                     "lhs": float(cash_end),
                     "rhs": float(rhs),
                     "diff": float(diff),
@@ -372,6 +396,20 @@ def resolve_report(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT version_id, parse_method
+                FROM report_versions
+                WHERE report_id = %s
+                """,
+                (report_id,),
+            )
+            version_to_engine = {
+                int(row[0]): (row[1] or f"version_{row[0]}")
+                for row in cur.fetchall()
+                if row[0] is not None
+            }
+
             cur.execute(
                 """
                 INSERT INTO report_versions (
@@ -407,8 +445,27 @@ def resolve_report(
                     )
                     grouped_flow[key][_value_key(candidate.value, tolerance)].append(candidate)
 
+                flow_groups_total = 0
+                flow_groups_multi_engine = 0
+                flow_groups_agreed = 0
                 for groups in grouped_flow.values():
-                    chosen, _, _, status, method = _choose_candidate(groups, min_agree)
+                    flow_groups_total += 1
+                    engines_in_group = {
+                        _engine_key(c, version_to_engine)
+                        for candidates in groups.values()
+                        for c in candidates
+                    }
+                    if len(engines_in_group) >= 2:
+                        flow_groups_multi_engine += 1
+                    max_agree = 0
+                    for candidates in groups.values():
+                        agree_count = len({_engine_key(c, version_to_engine) for c in candidates})
+                        if agree_count > max_agree:
+                            max_agree = agree_count
+                    if max_agree >= 2:
+                        flow_groups_agreed += 1
+
+                    chosen, _, _, status, method = _choose_candidate(groups, min_agree, version_to_engine)
                     _insert_flow_fact(cur, report_id, chosen, status, method, now)
                     summary["flow_facts"] += 1
 
@@ -423,10 +480,51 @@ def resolve_report(
                     )
                     grouped_stock[key][_value_key(candidate.value, tolerance)].append(candidate)
 
+                stock_groups_total = 0
+                stock_groups_multi_engine = 0
+                stock_groups_agreed = 0
                 for groups in grouped_stock.values():
-                    chosen, _, _, status, method = _choose_candidate(groups, min_agree)
+                    stock_groups_total += 1
+                    engines_in_group = {
+                        _engine_key(c, version_to_engine)
+                        for candidates in groups.values()
+                        for c in candidates
+                    }
+                    if len(engines_in_group) >= 2:
+                        stock_groups_multi_engine += 1
+                    max_agree = 0
+                    for candidates in groups.values():
+                        agree_count = len({_engine_key(c, version_to_engine) for c in candidates})
+                        if agree_count > max_agree:
+                            max_agree = agree_count
+                    if max_agree >= 2:
+                        stock_groups_agreed += 1
+
+                    chosen, _, _, status, method = _choose_candidate(groups, min_agree, version_to_engine)
                     _insert_stock_fact(cur, report_id, chosen, status, method, now)
                     summary["stock_facts"] += 1
+
+                summary["flow_groups_total"] = flow_groups_total
+                summary["flow_groups_multi_engine"] = flow_groups_multi_engine
+                summary["flow_groups_agreed"] = flow_groups_agreed
+                summary["flow_multi_engine_agreement_rate"] = (
+                    flow_groups_agreed / flow_groups_multi_engine if flow_groups_multi_engine else 0.0
+                )
+                summary["stock_groups_total"] = stock_groups_total
+                summary["stock_groups_multi_engine"] = stock_groups_multi_engine
+                summary["stock_groups_agreed"] = stock_groups_agreed
+                summary["stock_multi_engine_agreement_rate"] = (
+                    stock_groups_agreed / stock_groups_multi_engine if stock_groups_multi_engine else 0.0
+                )
+                total_groups = flow_groups_total + stock_groups_total
+                total_multi_engine = flow_groups_multi_engine + stock_groups_multi_engine
+                total_agreed = flow_groups_agreed + stock_groups_agreed
+                summary["multi_engine_groups_total"] = total_groups
+                summary["multi_engine_groups_with_multi"] = total_multi_engine
+                summary["multi_engine_groups_agreed"] = total_agreed
+                summary["multi_engine_agreement_rate"] = (
+                    total_agreed / total_multi_engine if total_multi_engine else 0.0
+                )
 
                 summary["consistency_checks"] = (
                     _check_balance_consistency(cur, report_id, consistency_abs_tol, consistency_rel_tol)

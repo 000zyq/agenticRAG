@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import re
 from datetime import datetime, date
 import json
 from pathlib import Path
@@ -50,7 +52,23 @@ STATEMENT_TYPE_MAP = {
     "balance_sheet": "balance",
     "income_statement": "income",
     "cash_flow": "cashflow",
+    "balance": "balance",
+    "income": "income",
+    "cashflow": "cashflow",
 }
+CORE_STATEMENT_TYPES = {"balance_sheet", "income_statement", "cash_flow"}
+CORE_STATEMENT_TITLE_RE = re.compile(r"(资产负债表|利润表|损益表|现金流量表)")
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
+CORE_STATEMENTS_ONLY = _env_bool("INGEST_CORE_STATEMENTS_ONLY", True)
+MIN_METRIC_ROWS_PER_TABLE = int(os.getenv("MIN_METRIC_ROWS_PER_TABLE", "2"))
 
 
 def _match_metric(label: str, statement_type: str) -> dict | None:
@@ -162,6 +180,43 @@ def _consolidation_scope(is_consolidated: bool | None) -> str | None:
     return None
 
 
+def _mineru_output_summary(parse_method: str, source_path: Path) -> dict:
+    if parse_method != "mineru":
+        return {}
+    output_override = os.getenv("MINERU_OUTPUT_DIR")
+    if not output_override:
+        return {}
+
+    output_root = Path(output_override).expanduser()
+    try:
+        output_root = output_root.resolve()
+    except OSError:
+        pass
+
+    report_dir = output_root / source_path.stem
+    summary = {
+        "mineru_output_dir": str(output_root),
+        "mineru_output_report_dir": str(report_dir),
+    }
+    search_roots = [report_dir, output_root] if report_dir != output_root else [output_root]
+    for root in search_roots:
+        if not root.exists():
+            continue
+        candidates = sorted(root.rglob("*_content_list.json"))
+        if candidates:
+            summary["mineru_content_list_path"] = str(candidates[0])
+            break
+    return summary
+
+
+def _is_core_statement_table(table) -> bool:
+    statement_type = (table.statement_type or "").strip()
+    if statement_type in CORE_STATEMENT_TYPES:
+        return True
+    title_text = f"{table.title or ''} {table.section_title or ''}"
+    return bool(CORE_STATEMENT_TITLE_RE.search(title_text))
+
+
 def _insert_facts_for_table(
     cur,
     report_id: int,
@@ -174,16 +229,24 @@ def _insert_facts_for_table(
     metric_cache: dict[str, int],
     write_facts: bool = True,
 ) -> tuple[int, int]:
+    if CORE_STATEMENTS_ONLY and not _is_core_statement_table(table):
+        return 0, 0
+
     mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
+    matched_rows = 0
     if mapped_statement:
-        matched = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
-        if matched == 0:
+        matched_rows = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
+        if matched_rows == 0:
             inferred = infer_statement_type_from_rows(table.rows)
             if inferred:
                 mapped_statement = inferred
     else:
         mapped_statement = infer_statement_type_from_rows(table.rows)
     if not mapped_statement:
+        return 0, 0
+    if matched_rows == 0:
+        matched_rows = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
+    if matched_rows < MIN_METRIC_ROWS_PER_TABLE:
         return 0, 0
 
     flow_fact_count = 0
@@ -360,6 +423,7 @@ def insert_report(
     parse_method_override: str | None = None,
     candidates_only: bool = False,
     allow_existing: bool = False,
+    write_pages: bool = False,
     engine: str | None = None,
 ) -> int:
     source_hash = sha256_file(path)
@@ -382,6 +446,7 @@ def insert_report(
     report_id: int | None = None
     version_id: int | None = None
     stage = "init"
+    mineru_summary = _mineru_output_summary(parse_method, path)
 
     try:
         with get_conn() as conn:
@@ -391,6 +456,9 @@ def insert_report(
                 if existing:
                     report_id = int(existing[0])
                     if not recompute_facts and not allow_existing:
+                        summary = {"reason": "duplicate"}
+                        if mineru_summary:
+                            summary.update(mineru_summary)
                         cur.execute(
                             """
                             INSERT INTO report_versions (
@@ -398,7 +466,7 @@ def insert_report(
                             )
                             VALUES (%s, %s, %s, %s, %s, %s, %s)
                             """,
-                            (report_id, parse_method, "v1", now, now, "skipped", json.dumps({"reason": "duplicate"})),
+                            (report_id, parse_method, "v1", now, now, "skipped", json.dumps(summary)),
                         )
                         conn.commit()
                         return report_id
@@ -415,6 +483,30 @@ def insert_report(
                             (report_id, parse_method, "v1", now, "running"),
                         )
                         version_id = int(cur.fetchone()[0])
+
+                        if write_pages:
+                            stage = "append_pages"
+                            page_rows = [
+                                (report_id, page.page, page.text_md, page.text_raw, now)
+                                for page in pages
+                            ]
+                            cur.executemany(
+                                """
+                                INSERT INTO report_pages (report_id, page_number, text_md, text_raw, created_at)
+                                VALUES (%s, %s, %s, %s, %s)
+                                ON CONFLICT (report_id, page_number)
+                                DO UPDATE SET
+                                    text_md = EXCLUDED.text_md,
+                                    text_raw = EXCLUDED.text_raw,
+                                    created_at = EXCLUDED.created_at
+                                WHERE report_pages.text_md IS NULL OR report_pages.text_md NOT LIKE '%%<table%%'
+                                """,
+                                page_rows,
+                            )
+                            cur.execute(
+                                "UPDATE report_pages SET tsv = to_tsvector('simple', coalesce(text_md, '')) WHERE report_id = %s",
+                                (report_id,),
+                            )
 
                         stage = "append_candidates"
                         metric_cache: dict[str, int] = {}
@@ -442,6 +534,10 @@ def insert_report(
                             "stock_facts": stock_fact_count,
                             "mode": "append_candidates",
                         }
+                        if write_pages:
+                            summary["pages_written"] = len(pages)
+                        if mineru_summary:
+                            summary.update(mineru_summary)
                         cur.execute(
                             """
                             UPDATE report_versions
@@ -505,6 +601,8 @@ def insert_report(
                         "stock_facts": stock_fact_count,
                         "mode": "recompute_facts",
                     }
+                    if mineru_summary:
+                        summary.update(mineru_summary)
                     cur.execute(
                         """
                         UPDATE report_versions
@@ -710,6 +808,8 @@ def insert_report(
                     "flow_facts": flow_fact_count,
                     "stock_facts": stock_fact_count,
                 }
+                if mineru_summary:
+                    summary.update(mineru_summary)
                 cur.execute(
                     """
                     UPDATE report_versions
@@ -752,6 +852,11 @@ def main() -> None:
         action="store_true",
         help="Allow appending candidates for an existing report without recompute.",
     )
+    parser.add_argument(
+        "--write-pages",
+        action="store_true",
+        help="Write or update report_pages when appending candidates for an existing report.",
+    )
     parser.add_argument("--engine", choices=["auto", "pypdf", "mineru"], default="auto", help="Select parser engine.")
     args = parser.parse_args()
 
@@ -765,6 +870,7 @@ def main() -> None:
         parse_method_override=args.parse_method,
         candidates_only=args.candidates_only,
         allow_existing=args.allow_existing,
+        write_pages=args.write_pages,
         engine=None if args.engine == "auto" else args.engine,
     )
     print(f"report_id={report_id}")

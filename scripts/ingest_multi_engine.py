@@ -34,6 +34,7 @@ def main() -> None:
     parser.add_argument("--min-agree", type=int, default=2, help="Minimum agreeing engines for consensus.")
     parser.add_argument("--tolerance", default="0.01", help="Value rounding tolerance for consensus.")
     parser.add_argument("--no-resolve", action="store_true", help="Skip consensus resolution.")
+    parser.add_argument("--write-pages", action="store_true", help="Write report_pages when appending candidates.")
     args = parser.parse_args()
 
     path = Path(args.path)
@@ -53,6 +54,7 @@ def main() -> None:
                 recompute_facts=args.recompute and idx == 0,
                 candidates_only=True,
                 allow_existing=idx > 0,
+                write_pages=args.write_pages and idx > 0,
                 engine=engine_value,
                 parse_method_override=engine,
             )

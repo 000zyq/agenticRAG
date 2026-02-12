@@ -8,3 +8,5 @@ docker/**/*
 
 **/node_modules/*
 frontend/.next/*/*
+tmp/hf_cache/
+tmp/mineru_output/

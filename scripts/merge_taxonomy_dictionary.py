@@ -11,11 +11,58 @@ from app.ingest.metric_defs import normalize_label
 
 STOP_LABELS = {
     "合计",
+    "小计",
     "其他",
     "金额",
+    "项目",
+    "单位",
+    "币种",
+    "余额",
     "本期",
     "上期",
+    "本年",
+    "上年",
+    "本年度",
+    "上年度",
+    "期末",
+    "期初",
+    "年末",
+    "年初",
+    "期末余额",
+    "期初余额",
+    "年末余额",
+    "年初余额",
+    "其中",
     "合计,",
+    "合计：",
+    "小计：",
+    "金额（元）",
+    "金额(元)",
+    "金额（人民币元）",
+    "人民币",
+    "元",
+    "千元",
+    "万元",
+    "亿元",
+    "total",
+    "subtotal",
+    "amount",
+    "balance",
+    "currency",
+    "unit",
+    "current",
+    "prior",
+    "year",
+}
+
+SHORT_LABEL_MAX = 2
+SHORT_LABEL_DENYLIST = {
+    "资产",
+    "负债",
+    "权益",
+    "现金",
+    "成本",
+    "费用",
 }
 
 
@@ -83,7 +130,9 @@ def _build_label_index(metrics: list[dict]) -> tuple[dict[str, str], set[str]]:
         code = metric["metric_code"]
         labels = [metric.get("metric_name_cn"), metric.get("metric_name_en")]
         labels += metric.get("patterns_cn", [])
+        labels += metric.get("patterns_cn_exact", [])
         labels += metric.get("patterns_en", [])
+        labels += metric.get("patterns_en_exact", [])
         for label in labels:
             if not label:
                 continue
@@ -116,6 +165,8 @@ def main() -> None:
     metric_map = {metric["metric_code"]: metric for metric in metrics}
 
     concept_labels: dict[str, list[dict]] = defaultdict(list)
+    stop_norm = {normalize_label(item) for item in STOP_LABELS}
+    short_deny_norm = {normalize_label(item) for item in SHORT_LABEL_DENYLIST}
     for entry in labels:
         concept = entry.get("concept")
         label = entry.get("label")
@@ -168,15 +219,17 @@ def main() -> None:
         for entry in entries:
             label = entry.get("label") or ""
             norm = normalize_label(label)
-            if not norm or norm in {normalize_label(item) for item in STOP_LABELS}:
+            if not norm or norm in stop_norm:
+                continue
+            if len(norm) <= SHORT_LABEL_MAX and norm in short_deny_norm:
                 continue
             if any(char.isdigit() for char in label):
                 continue
             lang = _normalize_lang(entry.get("lang"))
             if lang == "cn":
-                bucket = "patterns_cn"
+                bucket = "patterns_cn_exact" if len(norm) <= SHORT_LABEL_MAX else "patterns_cn"
             elif lang == "en":
-                bucket = "patterns_en"
+                bucket = "patterns_en_exact" if len(norm) <= SHORT_LABEL_MAX else "patterns_en"
             else:
                 continue
             if label not in metric[bucket]:
