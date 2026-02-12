@@ -13,7 +13,13 @@ from app.ingest.metric_defs import (
     match_metric,
     metric_code_from_label,
 )
-from app.storage.db import get_conn
+
+
+def _get_conn():
+    # Keep DB dependency lazy so utility-only imports can run in minimal CI env.
+    from app.storage.db import get_conn
+
+    return get_conn()
 
 
 def _record_error(
@@ -24,7 +30,7 @@ def _record_error(
     exc: Exception,
 ) -> None:
     try:
-        with get_conn() as conn:
+        with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -449,7 +455,7 @@ def insert_report(
     mineru_summary = _mineru_output_summary(parse_method, path)
 
     try:
-        with get_conn() as conn:
+        with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT report_id FROM financial_reports WHERE source_hash = %s", (source_hash,))
                 existing = cur.fetchone()
@@ -825,7 +831,7 @@ def insert_report(
         _record_error(path, report_id, None, stage, exc)
         if version_id is not None:
             try:
-                with get_conn() as conn:
+                with _get_conn() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
                             "UPDATE report_versions SET finished_at = %s, status = %s WHERE version_id = %s",
