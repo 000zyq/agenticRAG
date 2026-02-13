@@ -775,6 +775,13 @@ BASE_METRIC_DEFS = [
         "patterns": ["现金及现金等价物净增加额"],
     },
     {
+        "metric_code": "fx_effect_on_cash",
+        "metric_name_cn": "汇率变动对现金及现金等价物的影响",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["汇率变动对现金及现金等价物的影响", "汇率变动对现金及现金等价物的影响额"],
+    },
+    {
         "metric_code": "cash_begin",
         "metric_name_cn": "期初现金及现金等价物余额",
         "statement_type": "cashflow",
@@ -881,7 +888,19 @@ def _normalize_pattern_buckets(patterns: list[str], patterns_exact: list[str], i
     return _dedupe_keep_order(loose), _dedupe_keep_order(exact)
 
 
-METRIC_DEFS = _load_dictionary_file(DICTIONARY_PATH) or BASE_METRIC_DEFS
+def _merge_metric_defs(base_defs: list[dict], loaded_defs: list[dict] | None) -> list[dict]:
+    if not loaded_defs:
+        return list(base_defs)
+    merged = list(loaded_defs)
+    existing_codes = {str(item.get("metric_code")) for item in loaded_defs if item.get("metric_code")}
+    for metric in base_defs:
+        metric_code = metric.get("metric_code")
+        if metric_code and metric_code not in existing_codes:
+            merged.append(metric)
+    return merged
+
+
+METRIC_DEFS = _merge_metric_defs(BASE_METRIC_DEFS, _load_dictionary_file(DICTIONARY_PATH))
 
 
 def normalize_label(label: str) -> str:
@@ -1052,7 +1071,7 @@ def match_metric(label: str, statement_type: str) -> dict | None:
         alias_metric = METRIC_BY_CODE.get(alias_metric_code)
         if alias_metric:
             return alias_metric
-    label_has_ratio = ("率" in label) or ("%" in label)
+    label_has_ratio = ("%" in label) or norm_label.endswith("率") or ("比率" in norm_label) or ("比例" in norm_label)
     for metric in METRIC_DEFS:
         if metric["statement_type"] != statement_type:
             continue

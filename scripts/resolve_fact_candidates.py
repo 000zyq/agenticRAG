@@ -6,8 +6,14 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
+import re
 
-from app.storage.db import get_conn
+
+def _get_conn():
+    # Lazy import to keep utility/tests importable in minimal CI env.
+    from app.storage.db import get_conn
+
+    return get_conn()
 
 
 @dataclass(frozen=True)
@@ -23,6 +29,7 @@ class FlowCandidate:
     consolidation_scope: str | None
     audit_flag: str | None
     source_trace_id: int | None
+    column_label: str | None
     quality_score: Decimal | None
 
 
@@ -37,6 +44,7 @@ class StockCandidate:
     currency: str | None
     consolidation_scope: str | None
     source_trace_id: int | None
+    column_label: str | None
     quality_score: Decimal | None
 
 
@@ -61,6 +69,35 @@ def _engine_key(candidate, version_to_engine: dict[int, str]) -> str:
     return version_to_engine.get(candidate.version_id) or f"version_{candidate.version_id}"
 
 
+YEAR_RE = re.compile(r"^(20\d{2})$")
+COL_RE = re.compile(r"^col_(\d+)$")
+
+
+def _column_score(label: str | None) -> int:
+    if not label:
+        return 0
+    raw = label.strip()
+    lower = raw.lower()
+    year_match = YEAR_RE.match(raw)
+    if year_match:
+        return 10000 + int(year_match.group(1))
+    col_match = COL_RE.match(lower)
+    if col_match:
+        idx = int(col_match.group(1))
+        return 1000 - idx
+
+    score = 0
+    if any(token in lower for token in ("current", "current_period")):
+        score += 500
+    if any(token in raw for token in ("本期", "本年", "当期", "期末")):
+        score += 500
+    if any(token in lower for token in ("prior", "previous", "last", "prior_period")):
+        score -= 500
+    if any(token in raw for token in ("上期", "上年", "期初")):
+        score -= 500
+    return score
+
+
 def _choose_candidate(
     groups: dict[str, list],
     min_agree: int,
@@ -70,14 +107,20 @@ def _choose_candidate(
     for value_key, candidates in groups.items():
         engine_ids = {_engine_key(c, version_to_engine) for c in candidates}
         quality = _avg_quality([c.quality_score for c in candidates])
-        ranked.append((len(engine_ids), len(candidates), quality, value_key, candidates))
+        best_column_score = max(_column_score(c.column_label) for c in candidates)
+        ranked.append((len(engine_ids), len(candidates), quality, best_column_score, value_key, candidates))
     ranked.sort(reverse=True)
     best = ranked[0]
     agree_count = best[0]
-    chosen_candidates = best[4]
+    chosen_candidates = best[5]
     chosen = sorted(
         chosen_candidates,
-        key=lambda c: (c.quality_score is not None, c.quality_score or Decimal("0"), c.candidate_id),
+        key=lambda c: (
+            c.quality_score is not None,
+            c.quality_score or Decimal("0"),
+            _column_score(c.column_label),
+            c.candidate_id,
+        ),
         reverse=True,
     )[0]
     if agree_count >= min_agree:
@@ -150,10 +193,11 @@ def _insert_stock_fact(cur, report_id: int, candidate: StockCandidate, status: s
 def _load_flow_candidates(cur, report_id: int) -> list[FlowCandidate]:
     cur.execute(
         """
-        SELECT candidate_id, version_id, metric_id, period_start_date, period_end_date, value, unit, currency,
-               consolidation_scope, audit_flag, source_trace_id, quality_score
-        FROM financial_flow_candidate
-        WHERE report_id = %s
+        SELECT c.candidate_id, c.version_id, c.metric_id, c.period_start_date, c.period_end_date, c.value, c.unit, c.currency,
+               c.consolidation_scope, c.audit_flag, c.source_trace_id, st.column_label, c.quality_score
+        FROM financial_flow_candidate c
+        LEFT JOIN source_trace st ON st.trace_id = c.source_trace_id
+        WHERE c.report_id = %s
         """,
         (report_id,),
     )
@@ -170,7 +214,8 @@ def _load_flow_candidates(cur, report_id: int) -> list[FlowCandidate]:
             consolidation_scope=row[8],
             audit_flag=row[9],
             source_trace_id=row[10],
-            quality_score=row[11],
+            column_label=row[11],
+            quality_score=row[12],
         )
         for row in cur.fetchall()
     ]
@@ -179,10 +224,11 @@ def _load_flow_candidates(cur, report_id: int) -> list[FlowCandidate]:
 def _load_stock_candidates(cur, report_id: int) -> list[StockCandidate]:
     cur.execute(
         """
-        SELECT candidate_id, version_id, metric_id, as_of_date, value, unit, currency,
-               consolidation_scope, source_trace_id, quality_score
-        FROM financial_stock_candidate
-        WHERE report_id = %s
+        SELECT c.candidate_id, c.version_id, c.metric_id, c.as_of_date, c.value, c.unit, c.currency,
+               c.consolidation_scope, c.source_trace_id, st.column_label, c.quality_score
+        FROM financial_stock_candidate c
+        LEFT JOIN source_trace st ON st.trace_id = c.source_trace_id
+        WHERE c.report_id = %s
         """,
         (report_id,),
     )
@@ -197,7 +243,8 @@ def _load_stock_candidates(cur, report_id: int) -> list[StockCandidate]:
             currency=row[6],
             consolidation_scope=row[7],
             source_trace_id=row[8],
-            quality_score=row[9],
+            column_label=row[9],
+            quality_score=row[10],
         )
         for row in cur.fetchall()
     ]
@@ -219,6 +266,18 @@ def _within_tolerance(lhs: Decimal, rhs: Decimal, abs_tol: Decimal, rel_tol: Dec
         return True
     scale = max(abs(lhs), abs(rhs))
     return diff <= (scale * rel_tol)
+
+
+def _cashflow_net_increase_rhs(
+    operating: Decimal,
+    investing: Decimal,
+    financing: Decimal,
+    fx_effect: Decimal | None = None,
+) -> Decimal:
+    rhs = operating + investing + financing
+    if fx_effect is not None:
+        rhs += fx_effect
+    return rhs
 
 
 def _check_balance_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: Decimal) -> list[dict]:
@@ -300,12 +359,27 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
             "net_cash_flow_investing",
             "net_cash_flow_financing",
             "net_increase_cash",
+            "fx_effect_on_cash",
             "cash_begin",
             "cash_end",
         ],
     )
     if not metric_ids:
         return []
+    if "fx_effect_on_cash" not in metric_ids:
+        cur.execute(
+            """
+            SELECT metric_id
+            FROM metric
+            WHERE statement_type = 'cashflow' AND metric_name_cn LIKE %s
+            ORDER BY metric_id
+            LIMIT 1
+            """,
+            ("%汇率变动对现金及现金等价物的影响%",),
+        )
+        row = cur.fetchone()
+        if row:
+            metric_ids["fx_effect_on_cash"] = int(row[0])
 
     cur.execute(
         """
@@ -327,6 +401,7 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
     inv_id = metric_ids.get("net_cash_flow_investing")
     fin_id = metric_ids.get("net_cash_flow_financing")
     inc_id = metric_ids.get("net_increase_cash")
+    fx_id = metric_ids.get("fx_effect_on_cash")
     begin_id = metric_ids.get("cash_begin")
     end_id = metric_ids.get("cash_end")
 
@@ -335,11 +410,12 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
         investing = values.get(inv_id) if inv_id else None
         financing = values.get(fin_id) if fin_id else None
         net_increase = values.get(inc_id) if inc_id else None
+        fx_effect = values.get(fx_id) if fx_id else None
         cash_begin = values.get(begin_id) if begin_id else None
         cash_end = values.get(end_id) if end_id else None
 
         if operating is not None and investing is not None and financing is not None and net_increase is not None:
-            rhs = operating + investing + financing
+            rhs = _cashflow_net_increase_rhs(operating, investing, financing, fx_effect)
             diff = net_increase - rhs
             checks.append(
                 {
@@ -350,6 +426,7 @@ def _check_cashflow_consistency(cur, report_id: int, abs_tol: Decimal, rel_tol: 
                     "consolidation_scope": scope,
                     "lhs": float(net_increase),
                     "rhs": float(rhs),
+                    "fx_effect": float(fx_effect) if fx_effect is not None else None,
                     "diff": float(diff),
                     "status": "pass" if _within_tolerance(net_increase, rhs, abs_tol, rel_tol) else "fail",
                 }
@@ -394,7 +471,7 @@ def resolve_report(
         "min_agree": min_agree,
     }
 
-    with get_conn() as conn:
+    with _get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """

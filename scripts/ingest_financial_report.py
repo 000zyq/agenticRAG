@@ -574,18 +574,131 @@ def insert_report(
                     cur.execute("DELETE FROM financial_flow_candidate WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM financial_stock_candidate WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM source_trace WHERE report_id = %s", (report_id,))
+                    # Rebuild table structures to avoid stale table-id/index drift across parser updates.
+                    cur.execute(
+                        """
+                        DELETE FROM report_table_cells
+                        WHERE row_id IN (
+                            SELECT r.row_id
+                            FROM report_table_rows r
+                            JOIN report_tables t ON t.table_id = r.table_id
+                            WHERE t.report_id = %s
+                        )
+                        """,
+                        (report_id,),
+                    )
+                    cur.execute(
+                        """
+                        DELETE FROM report_table_rows
+                        WHERE table_id IN (
+                            SELECT table_id FROM report_tables WHERE report_id = %s
+                        )
+                        """,
+                        (report_id,),
+                    )
+                    cur.execute(
+                        """
+                        DELETE FROM report_table_columns
+                        WHERE table_id IN (
+                            SELECT table_id FROM report_tables WHERE report_id = %s
+                        )
+                        """,
+                        (report_id,),
+                    )
+                    cur.execute("DELETE FROM report_tables WHERE report_id = %s", (report_id,))
 
                     stage = "recompute_facts_insert"
-                    existing_table_ids, existing_row_map = _load_existing_table_row_map(cur, report_id)
                     metric_cache: dict[str, int] = {}
                     flow_fact_count = 0
                     stock_fact_count = 0
-                    for table_idx, table in enumerate(tables):
-                        table_id = existing_table_ids[table_idx] if table_idx < len(existing_table_ids) else None
-                        row_ids = None
-                        if table_id is not None:
-                            row_index_map = existing_row_map.get(table_id, {})
-                            row_ids = [row_index_map.get(row_idx) for row_idx in range(len(table.rows))]
+                    for table in tables:
+                        table_currency = table.currency or meta.currency
+                        table_units = table.units or meta.units
+                        table_currency_status = "detected" if table_currency else "missing"
+                        table_units_status = "detected" if table_units else "missing"
+
+                        cur.execute(
+                            """
+                            INSERT INTO report_tables (
+                                report_id, section_title, statement_type, title, page_start, page_end,
+                                currency, units, is_consolidated, currency_status, units_status,
+                                extra, created_at
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            RETURNING table_id
+                            """,
+                            (
+                                report_id,
+                                table.section_title,
+                                table.statement_type,
+                                table.title,
+                                table.page_start,
+                                table.page_end,
+                                table_currency,
+                                table_units,
+                                table.is_consolidated,
+                                table_currency_status,
+                                table_units_status,
+                                None,
+                                now,
+                            ),
+                        )
+                        table_id = int(cur.fetchone()[0])
+
+                        column_ids: list[int] = []
+                        for idx, col in enumerate(table.columns):
+                            cur.execute(
+                                """
+                                INSERT INTO report_table_columns (
+                                    table_id, column_index, label, period_start, period_end,
+                                    fiscal_year, fiscal_period, extra, created_at
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                RETURNING column_id
+                                """,
+                                (
+                                    table_id,
+                                    idx,
+                                    col.label,
+                                    col.period_start,
+                                    col.period_end,
+                                    col.fiscal_year,
+                                    col.fiscal_period,
+                                    None,
+                                    now,
+                                ),
+                            )
+                            column_ids.append(int(cur.fetchone()[0]))
+
+                        row_ids: list[int] = []
+                        for idx, row in enumerate(table.rows):
+                            is_total = "合计" in row.label or "total" in row.label.lower()
+                            cur.execute(
+                                """
+                                INSERT INTO report_table_rows (
+                                    table_id, row_index, label, level, is_total, page_number, extra, created_at
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                RETURNING row_id
+                                """,
+                                (table_id, idx, row.label, None, is_total, row.page_number, None, now),
+                            )
+                            row_ids.append(int(cur.fetchone()[0]))
+
+                        for row_id, row in zip(row_ids, table.rows):
+                            for col_id, cell in zip(column_ids, row.cells):
+                                if cell.value is None and not cell.raw_text:
+                                    continue
+                                cur.execute(
+                                    """
+                                    INSERT INTO report_table_cells (
+                                        row_id, column_id, value, raw_text, unit, extra, created_at
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                    """,
+                                    (row_id, col_id, cell.value, cell.raw_text, table_units, None, now),
+                                )
+
                         flow_inc, stock_inc = _insert_facts_for_table(
                             cur,
                             report_id,

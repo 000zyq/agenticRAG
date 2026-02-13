@@ -32,6 +32,13 @@ def test_detect_units_usd() -> None:
     assert units is None
 
 
+def test_detect_units_does_not_fallback_to_long_text() -> None:
+    text = "取得子公司及其他营业单位支付的现金净额 支付其他与投资活动有关的现金 13,586,560.00"
+    currency, units = _detect_units(text)
+    assert currency is None
+    assert units is None
+
+
 def test_parse_date_from_text() -> None:
     assert _parse_date_from_text("As of 2024-12-31") == date(2024, 12, 31)
     assert _parse_date_from_text("截至 2024 年 12 月 31 日") == date(2024, 12, 31)

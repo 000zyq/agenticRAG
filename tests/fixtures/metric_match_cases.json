@@ -12,6 +12,7 @@
     {"id": "p10", "label": "投资活动产生的现金流量净额", "statement_type": "cashflow", "expected_metric_code": "net_cash_flow_investing", "required": true},
     {"id": "p11", "label": "筹资活动产生的现金流量净额", "statement_type": "cashflow", "expected_metric_code": "net_cash_flow_financing", "required": true},
     {"id": "p12", "label": "现金及现金等价物净增加额", "statement_type": "cashflow", "expected_metric_code": "net_increase_cash", "required": true},
+    {"id": "p12b", "label": "汇率变动对现金及现金等价物的影响", "statement_type": "cashflow", "expected_metric_code": "fx_effect_on_cash", "required": true},
     {"id": "p13", "label": "期初现金及现金等价物余额", "statement_type": "cashflow", "expected_metric_code": "cash_begin", "required": true},
     {"id": "p14", "label": "期末现金及现金等价物余额", "statement_type": "cashflow", "expected_metric_code": "cash_end", "required": true},
     {"id": "p15", "label": "资产总计", "statement_type": "balance", "expected_metric_code": "total_assets", "required": true},
