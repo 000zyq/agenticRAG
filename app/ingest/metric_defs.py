@@ -16,10 +16,20 @@ SHORT_CN_DENYLIST = {
     "费用",
 }
 
+LEADING_ENUM_RE = re.compile(r"^\s*(?:[（(]\s*[一二三四五六七八九十\d]+\s*[）)]|[一二三四五六七八九十\d]+[、.．])\s*")
+LEADING_PREFIX_RE = re.compile(r"^\s*其中\s*[：:]\s*")
+PAREN_ANNOTATION_RE = re.compile(
+    r"[（(][^（）()]{0,64}(?:净亏损以|亏损以|损失以|收益以|号填列|填列)[^（）()]{0,64}[）)]"
+)
+
 
 def _normalize_label_impl(label: str) -> str:
-    cleaned = re.sub(r"[\s\u3000]+", "", label)
-    cleaned = re.sub(r"[：:（）()，,．.。;；、-]+", "", cleaned)
+    cleaned = str(label or "")
+    cleaned = LEADING_ENUM_RE.sub("", cleaned)
+    cleaned = LEADING_PREFIX_RE.sub("", cleaned)
+    cleaned = PAREN_ANNOTATION_RE.sub("", cleaned)
+    cleaned = re.sub(r"[\s\u3000]+", "", cleaned)
+    cleaned = re.sub(r"[：:（）()，,．.。;；、_\-—－/\\“”\"'‘’`]+", "", cleaned)
     return cleaned.lower()
 
 
@@ -197,7 +207,51 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "其他收益",
         "statement_type": "income",
         "value_nature": "flow",
-        "patterns": ["其他收益"],
+        "patterns": ["其他收益", "保险赔偿", "废品销售"],
+    },
+    {
+        "metric_code": "investment_income",
+        "metric_name_cn": "投资收益",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["投资收益", "投资损失"],
+    },
+    {
+        "metric_code": "investment_income_associates",
+        "metric_name_cn": "对联营企业和合营企业的投资收益",
+        "metric_name_en": "Investment Income From Associates And Joint Ventures",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["对联营企业和合营企业的投资收益", "联营企业和合营企业投资收益"],
+        "parent_metric_code": "investment_income",
+    },
+    {
+        "metric_code": "credit_impairment_loss",
+        "metric_name_cn": "信用减值损失",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["信用减值损失"],
+    },
+    {
+        "metric_code": "asset_impairment_loss",
+        "metric_name_cn": "资产减值损失",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["资产减值损失"],
+    },
+    {
+        "metric_code": "asset_disposal_income",
+        "metric_name_cn": "资产处置收益",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["资产处置收益", "固定资产报废损失", "处置固定资产、无形资产和其他长期资产的损失"],
+    },
+    {
+        "metric_code": "fair_value_change_gain",
+        "metric_name_cn": "公允价值变动收益",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["公允价值变动收益", "公允价值变动损失"],
     },
     {
         "metric_code": "non_operating_income",
@@ -242,11 +296,80 @@ BASE_METRIC_DEFS = [
         "patterns": ["净利润", "净收益"],
     },
     {
+        "metric_code": "net_profit_continuing",
+        "metric_name_cn": "持续经营净利润",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["持续经营净利润"],
+        "parent_metric_code": "net_profit",
+    },
+    {
         "metric_code": "net_profit_parent",
         "metric_name_cn": "归属于母公司股东的净利润",
         "statement_type": "income",
         "value_nature": "flow",
         "patterns": ["归属于母公司股东的净利润", "归母净利润", "归属于母公司所有者的净利润"],
+    },
+    {
+        "metric_code": "net_profit_minority",
+        "metric_name_cn": "少数股东损益",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["少数股东损益"],
+    },
+    {
+        "metric_code": "other_comprehensive_income_net",
+        "metric_name_cn": "其他综合收益的税后净额",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["其他综合收益的税后净额", "归属母公司所有者的其他综合收益的税后净额"],
+    },
+    {
+        "metric_code": "other_comprehensive_income_reclassifiable",
+        "metric_name_cn": "将重分类进损益的其他综合收益",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["将重分类进损益的其他综合收益"],
+        "parent_metric_code": "other_comprehensive_income_net",
+    },
+    {
+        "metric_code": "other_comprehensive_income_not_reclassifiable",
+        "metric_name_cn": "不能重分类进损益的其他综合收益",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["不能重分类进损益的其他综合收益"],
+        "parent_metric_code": "other_comprehensive_income_net",
+    },
+    {
+        "metric_code": "oci_fv_change_other_equity_investments",
+        "metric_name_cn": "其他权益工具投资公允价值变动",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["其他权益工具投资公允价值变动"],
+        "parent_metric_code": "other_comprehensive_income_not_reclassifiable",
+    },
+    {
+        "metric_code": "total_comprehensive_income",
+        "metric_name_cn": "综合收益总额",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["综合收益总额"],
+    },
+    {
+        "metric_code": "total_comprehensive_income_parent",
+        "metric_name_cn": "归属于母公司所有者的综合收益总额",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["归属于母公司所有者的综合收益总额", "归属于母公司股东的综合收益总额", "归属母公司所有者的综合收益总额"],
+        "parent_metric_code": "total_comprehensive_income",
+    },
+    {
+        "metric_code": "total_comprehensive_income_minority",
+        "metric_name_cn": "归属于少数股东的综合收益总额",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["归属于少数股东的综合收益总额"],
+        "parent_metric_code": "total_comprehensive_income",
     },
     {
         "metric_code": "eps_basic",
@@ -306,6 +429,14 @@ BASE_METRIC_DEFS = [
         "statement_type": "balance",
         "value_nature": "stock",
         "patterns": ["其他应收款"],
+    },
+    {
+        "metric_code": "dividends_receivable",
+        "metric_name_cn": "应收股利",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["应收股利"],
+        "parent_metric_code": "other_receivables",
     },
     {
         "metric_code": "inventory",
@@ -492,6 +623,14 @@ BASE_METRIC_DEFS = [
         "patterns": ["其他应付款"],
     },
     {
+        "metric_code": "dividends_payable",
+        "metric_name_cn": "应付股利",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["应付股利"],
+        "parent_metric_code": "other_payables",
+    },
+    {
         "metric_code": "current_portion_noncurrent_liabilities",
         "metric_name_cn": "一年内到期的非流动负债",
         "statement_type": "balance",
@@ -506,6 +645,13 @@ BASE_METRIC_DEFS = [
         "patterns": ["其他流动负债"],
     },
     {
+        "metric_code": "current_liabilities_total",
+        "metric_name_cn": "流动负债合计",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["流动负债合计", "流动负债总计"],
+    },
+    {
         "metric_code": "long_term_borrowings",
         "metric_name_cn": "长期借款",
         "statement_type": "balance",
@@ -513,11 +659,39 @@ BASE_METRIC_DEFS = [
         "patterns": ["长期借款"],
     },
     {
+        "metric_code": "long_term_payables",
+        "metric_name_cn": "长期应付款",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["长期应付款"],
+    },
+    {
         "metric_code": "bonds_payable",
         "metric_name_cn": "应付债券",
         "statement_type": "balance",
         "value_nature": "stock",
         "patterns": ["应付债券"],
+    },
+    {
+        "metric_code": "lease_liability",
+        "metric_name_cn": "租赁负债",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["租赁负债"],
+    },
+    {
+        "metric_code": "deferred_income",
+        "metric_name_cn": "递延收益",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["递延收益"],
+    },
+    {
+        "metric_code": "noncurrent_liabilities_total",
+        "metric_name_cn": "非流动负债合计",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["非流动负债合计", "非流动负债总计"],
     },
     {
         "metric_code": "total_liabilities",
@@ -558,11 +732,32 @@ BASE_METRIC_DEFS = [
         "patterns": ["未分配利润"],
     },
     {
+        "metric_code": "surplus_reserve",
+        "metric_name_cn": "盈余公积",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["盈余公积"],
+    },
+    {
         "metric_code": "other_equity_instruments",
         "metric_name_cn": "其他权益工具",
         "statement_type": "balance",
         "value_nature": "stock",
         "patterns": ["其他权益工具"],
+    },
+    {
+        "metric_code": "other_equity_investments",
+        "metric_name_cn": "其他权益工具投资",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["其他权益工具投资"],
+    },
+    {
+        "metric_code": "investment_property",
+        "metric_name_cn": "投资性房地产",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["投资性房地产"],
     },
     {
         "metric_code": "treasury_stock",
@@ -591,6 +786,13 @@ BASE_METRIC_DEFS = [
         "statement_type": "balance",
         "value_nature": "stock",
         "patterns": ["所有者权益合计", "股东权益合计", "权益合计"],
+    },
+    {
+        "metric_code": "minority_interest",
+        "metric_name_cn": "少数股东权益",
+        "statement_type": "balance",
+        "value_nature": "stock",
+        "patterns": ["少数股东权益", "少数股东权益合计"],
     },
     {
         "metric_code": "total_liabilities_equity",
@@ -628,6 +830,13 @@ BASE_METRIC_DEFS = [
         "patterns": ["收到其他与经营活动有关的现金"],
     },
     {
+        "metric_code": "tax_refund_received",
+        "metric_name_cn": "收到的税费返还",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["收到的税费返还"],
+    },
+    {
         "metric_code": "cash_paid_to_employees",
         "metric_name_cn": "支付给职工以及为职工支付的现金",
         "statement_type": "cashflow",
@@ -647,6 +856,34 @@ BASE_METRIC_DEFS = [
         "statement_type": "cashflow",
         "value_nature": "flow",
         "patterns": ["支付其他与经营活动有关的现金"],
+    },
+    {
+        "metric_code": "operating_receivables_change",
+        "metric_name_cn": "经营性应收项目变动",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["经营性应收项目的减少", "经营性应收项目的增加"],
+    },
+    {
+        "metric_code": "operating_payables_change",
+        "metric_name_cn": "经营性应付项目变动",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["经营性应付项目的增加", "经营性应付项目的减少"],
+    },
+    {
+        "metric_code": "inventory_change",
+        "metric_name_cn": "存货变动",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["存货的减少", "存货的增加"],
+    },
+    {
+        "metric_code": "deferred_tax_assets_change",
+        "metric_name_cn": "递延所得税资产变动",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["递延所得税资产减少", "递延所得税资产增加"],
     },
     {
         "metric_code": "operating_cash_inflows_subtotal",
@@ -688,7 +925,7 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "处置长期资产收回的现金净额",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["处置固定资产", "处置无形资产", "资产收回的现金净额"],
+        "patterns": ["处置固定资产", "处置无形资产", "资产收回的现金净额", "处置固定资产、无形资产和其他长期资产收回的现金净额"],
     },
     {
         "metric_code": "investing_cash_inflows_subtotal",
@@ -702,7 +939,7 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "购建长期资产支付的现金",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["购建固定资产", "购建无形资产", "资产支付的现金"],
+        "patterns": ["购建固定资产", "购建无形资产", "资产支付的现金", "购建固定资产、无形资产和其他长期资产支付的现金"],
     },
     {
         "metric_code": "cash_paid_for_investments",
@@ -710,6 +947,13 @@ BASE_METRIC_DEFS = [
         "statement_type": "cashflow",
         "value_nature": "flow",
         "patterns": ["投资支付的现金"],
+    },
+    {
+        "metric_code": "cash_paid_other_investing",
+        "metric_name_cn": "支付其他与投资活动有关的现金",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["支付其他与投资活动有关的现金"],
     },
     {
         "metric_code": "investing_cash_outflows_subtotal",
@@ -737,7 +981,7 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "收到其他与筹资活动有关的现金",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["收到其他与筹资活动有关的现金"],
+        "patterns": ["收到其他与筹资活动有关的现金", "子公司吸收少数股东投资收到的现金"],
     },
     {
         "metric_code": "financing_cash_inflows_subtotal",
@@ -758,7 +1002,28 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "支付其他与筹资活动有关的现金",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["支付其他与筹资活动有关的现金"],
+        "patterns": ["支付其他与筹资活动有关的现金", "子公司支付给少数股东的股利、利润"],
+    },
+    {
+        "metric_code": "cash_received_from_capital_contributions",
+        "metric_name_cn": "吸收投资收到的现金",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["吸收投资收到的现金"],
+    },
+    {
+        "metric_code": "cash_paid_dividends_interest",
+        "metric_name_cn": "分配股利、利润或偿付利息支付的现金",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["分配股利、利润或偿付利息支付的现金"],
+    },
+    {
+        "metric_code": "cash_flow_hedge_reserve",
+        "metric_name_cn": "现金流量套期储备",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["现金流量套期储备"],
     },
     {
         "metric_code": "financing_cash_outflows_subtotal",
@@ -786,21 +1051,28 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "期初现金及现金等价物余额",
         "statement_type": "cashflow",
         "value_nature": "stock",
-        "patterns": ["期初现金及现金等价物余额"],
+        "patterns": ["期初现金及现金等价物余额", "现金的期初余额"],
     },
     {
         "metric_code": "cash_end",
         "metric_name_cn": "期末现金及现金等价物余额",
         "statement_type": "cashflow",
         "value_nature": "stock",
-        "patterns": ["期末现金及现金等价物余额"],
+        "patterns": ["期末现金及现金等价物余额", "现金的期末余额"],
     },
     {
         "metric_code": "depreciation_amortization",
         "metric_name_cn": "折旧及摊销",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["折旧及摊销"],
+        "patterns": ["折旧及摊销", "固定资产折旧、油气资产折耗、生产性生物资产折旧", "投资性房地产折旧", "使用权资产折旧", "无形资产摊销", "长期待摊费用摊销"],
+    },
+    {
+        "metric_code": "asset_impairment_provision",
+        "metric_name_cn": "资产减值准备",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["资产减值准备"],
     },
 ]
 
@@ -891,13 +1163,38 @@ def _normalize_pattern_buckets(patterns: list[str], patterns_exact: list[str], i
 def _merge_metric_defs(base_defs: list[dict], loaded_defs: list[dict] | None) -> list[dict]:
     if not loaded_defs:
         return list(base_defs)
-    merged = list(loaded_defs)
-    existing_codes = {str(item.get("metric_code")) for item in loaded_defs if item.get("metric_code")}
+
+    by_code: dict[str, dict] = {}
+    order: list[str] = []
+    for metric in loaded_defs:
+        metric_code = str(metric.get("metric_code") or "").strip()
+        if not metric_code or metric_code in by_code:
+            continue
+        by_code[metric_code] = dict(metric)
+        order.append(metric_code)
+
     for metric in base_defs:
         metric_code = metric.get("metric_code")
-        if metric_code and metric_code not in existing_codes:
-            merged.append(metric)
-    return merged
+        if not metric_code:
+            continue
+        if metric_code not in by_code:
+            by_code[metric_code] = dict(metric)
+            order.append(metric_code)
+            continue
+
+        merged_metric = by_code[metric_code]
+        for key in ("patterns", "patterns_exact", "patterns_en", "patterns_en_exact"):
+            left = list(merged_metric.get(key) or [])
+            right = list(metric.get(key) or [])
+            merged_metric[key] = _dedupe_keep_order(left + right)
+        if not merged_metric.get("metric_name_cn") and metric.get("metric_name_cn"):
+            merged_metric["metric_name_cn"] = metric["metric_name_cn"]
+        if not merged_metric.get("metric_name_en") and metric.get("metric_name_en"):
+            merged_metric["metric_name_en"] = metric["metric_name_en"]
+        if not merged_metric.get("parent_metric_code") and metric.get("parent_metric_code"):
+            merged_metric["parent_metric_code"] = metric["parent_metric_code"]
+
+    return [by_code[metric_code] for metric_code in order]
 
 
 METRIC_DEFS = _merge_metric_defs(BASE_METRIC_DEFS, _load_dictionary_file(DICTIONARY_PATH))
@@ -907,7 +1204,7 @@ def normalize_label(label: str) -> str:
     return _normalize_label_impl(label)
 
 
-def _load_cas2020_mapping(path: Path) -> dict[str, dict[str, list[str]]] | None:
+def _load_cas2020_mapping(path: Path) -> dict[str, dict[str, list[str] | str]] | None:
     if not path.exists():
         return None
     try:
@@ -920,26 +1217,40 @@ def _load_cas2020_mapping(path: Path) -> dict[str, dict[str, list[str]]] | None:
 
     by_sub_code: dict[str, set[str]] = {}
     by_sub_name: dict[str, set[str]] = {}
+    by_sub_code_unmapped: dict[str, str] = {}
+    by_sub_name_unmapped: dict[str, str] = {}
     for item in records:
         if not isinstance(item, dict):
             continue
         metric_code = str(item.get("metric_code") or "").strip()
-        if not metric_code:
-            continue
         sub_code = str(item.get("sub_code") or "").strip()
-        if sub_code:
-            by_sub_code.setdefault(sub_code, set()).add(metric_code)
-        for key in ("sub_name", "sub_name_raw"):
-            sub_name = str(item.get(key) or "").strip()
-            if not sub_name:
+        sub_name = str(item.get("sub_name") or "").strip()
+        sub_name_raw = str(item.get("sub_name_raw") or "").strip()
+        if metric_code:
+            if sub_code:
+                by_sub_code.setdefault(sub_code, set()).add(metric_code)
+            for sub_name_item in (sub_name, sub_name_raw):
+                if not sub_name_item:
+                    continue
+                norm_sub_name = _normalize_label_impl(sub_name_item)
+                if norm_sub_name:
+                    by_sub_name.setdefault(norm_sub_name, set()).add(metric_code)
+            continue
+
+        if sub_code and sub_name:
+            by_sub_code_unmapped.setdefault(sub_code, sub_name)
+        for sub_name_item in (sub_name, sub_name_raw):
+            if not sub_name_item:
                 continue
-            norm_sub_name = _normalize_label_impl(sub_name)
-            if norm_sub_name:
-                by_sub_name.setdefault(norm_sub_name, set()).add(metric_code)
+            norm_sub_name = _normalize_label_impl(sub_name_item)
+            if norm_sub_name and sub_code:
+                by_sub_name_unmapped.setdefault(norm_sub_name, sub_code)
 
     return {
         "by_sub_code": {k: sorted(v) for k, v in by_sub_code.items()},
         "by_sub_name": {k: sorted(v) for k, v in by_sub_name.items()},
+        "by_sub_code_unmapped": by_sub_code_unmapped,
+        "by_sub_name_unmapped": by_sub_name_unmapped,
     }
 
 
@@ -947,6 +1258,9 @@ METRIC_BY_CODE = {metric["metric_code"]: metric for metric in METRIC_DEFS}
 CAS2020_MAPPING = _load_cas2020_mapping(CAS2020_MAPPING_PATH)
 EXACT_LABEL_ALIASES = {
     ("balance", normalize_label("资产合计")): "total_assets",
+    ("cashflow", normalize_label("到的现金")): "cash_received_from_capital_contributions",
+    ("cashflow", normalize_label("利、利润")): "cash_paid_dividends_interest",
+    ("cashflow", normalize_label("耗、生产性生物资产折旧")): "depreciation_amortization",
 }
 
 
@@ -1064,6 +1378,53 @@ def _match_metric_from_cas2020_mapping(label: str, statement_type: str) -> dict 
     return None
 
 
+def _synthetic_metric_from_cas2020_mapping(label: str, statement_type: str) -> dict | None:
+    if not CAS2020_MAPPING:
+        return None
+    by_sub_code_unmapped = CAS2020_MAPPING.get("by_sub_code_unmapped", {})
+    by_sub_name_unmapped = CAS2020_MAPPING.get("by_sub_name_unmapped", {})
+
+    sub_code = _extract_sub_code(label)
+    if sub_code and sub_code in by_sub_code_unmapped:
+        sub_name = str(by_sub_code_unmapped[sub_code]).strip()
+        metric_code = f"cas2020_{sub_code}"
+        existing = METRIC_BY_CODE.get(metric_code)
+        if existing and existing["statement_type"] == statement_type:
+            return existing
+        value_nature = "ratio" if ("%" in label or normalize_label(label).endswith("率")) else ("stock" if statement_type == "balance" else "flow")
+        return {
+            "metric_code": metric_code,
+            "metric_name_cn": sub_name or label,
+            "statement_type": statement_type,
+            "value_nature": value_nature,
+            "patterns": [sub_name] if sub_name else [],
+            "patterns_exact": [],
+            "patterns_en": [],
+            "patterns_en_exact": [],
+        }
+
+    for candidate in _label_candidates_for_mapping(label, sub_code):
+        candidate_code = str(by_sub_name_unmapped.get(candidate) or "").strip()
+        if not candidate_code:
+            continue
+        metric_code = f"cas2020_{candidate_code}"
+        existing = METRIC_BY_CODE.get(metric_code)
+        if existing and existing["statement_type"] == statement_type:
+            return existing
+        value_nature = "ratio" if ("%" in label or normalize_label(label).endswith("率")) else ("stock" if statement_type == "balance" else "flow")
+        return {
+            "metric_code": metric_code,
+            "metric_name_cn": label,
+            "statement_type": statement_type,
+            "value_nature": value_nature,
+            "patterns": [],
+            "patterns_exact": [],
+            "patterns_en": [],
+            "patterns_en_exact": [],
+        }
+    return None
+
+
 def match_metric(label: str, statement_type: str) -> dict | None:
     norm_label = normalize_label(label)
     alias_metric_code = EXACT_LABEL_ALIASES.get((statement_type, norm_label))
@@ -1086,6 +1447,9 @@ def match_metric(label: str, statement_type: str) -> dict | None:
             if _pattern_matches_label(norm_label, norm_pattern):
                 return metric
     metric = _match_metric_from_cas2020_mapping(label, statement_type)
+    if metric:
+        return metric
+    metric = _synthetic_metric_from_cas2020_mapping(label, statement_type)
     if metric:
         return metric
     return None

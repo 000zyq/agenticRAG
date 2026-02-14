@@ -1,49 +1,494 @@
 {
   "cases": [
-    {"id": "p01", "label": "营业收入", "statement_type": "income", "expected_metric_code": "revenue", "required": true},
-    {"id": "p02", "label": "一、营业收入", "statement_type": "income", "expected_metric_code": "revenue", "required": true},
-    {"id": "p03", "label": "营业成本", "statement_type": "income", "expected_metric_code": "operating_cost", "required": true},
-    {"id": "p04", "label": "二、营业成本", "statement_type": "income", "expected_metric_code": "operating_cost", "required": true},
-    {"id": "p05", "label": "利润总额", "statement_type": "income", "expected_metric_code": "total_profit", "required": true},
-    {"id": "p06", "label": "净利润", "statement_type": "income", "expected_metric_code": "net_profit", "required": true},
-    {"id": "p07", "label": "基本每股收益", "statement_type": "income", "expected_metric_code": "eps_basic", "required": true},
-    {"id": "p08", "label": "稀释每股收益", "statement_type": "income", "expected_metric_code": "eps_diluted", "required": true},
-    {"id": "p09", "label": "经营活动产生的现金流量净额", "statement_type": "cashflow", "expected_metric_code": "net_cash_flow_operating", "required": true},
-    {"id": "p10", "label": "投资活动产生的现金流量净额", "statement_type": "cashflow", "expected_metric_code": "net_cash_flow_investing", "required": true},
-    {"id": "p11", "label": "筹资活动产生的现金流量净额", "statement_type": "cashflow", "expected_metric_code": "net_cash_flow_financing", "required": true},
-    {"id": "p12", "label": "现金及现金等价物净增加额", "statement_type": "cashflow", "expected_metric_code": "net_increase_cash", "required": true},
-    {"id": "p12b", "label": "汇率变动对现金及现金等价物的影响", "statement_type": "cashflow", "expected_metric_code": "fx_effect_on_cash", "required": true},
-    {"id": "p13", "label": "期初现金及现金等价物余额", "statement_type": "cashflow", "expected_metric_code": "cash_begin", "required": true},
-    {"id": "p14", "label": "期末现金及现金等价物余额", "statement_type": "cashflow", "expected_metric_code": "cash_end", "required": true},
-    {"id": "p15", "label": "资产总计", "statement_type": "balance", "expected_metric_code": "total_assets", "required": true},
-    {"id": "p16", "label": "负债合计", "statement_type": "balance", "expected_metric_code": "total_liabilities", "required": true},
-    {"id": "p17", "label": "流动资产合计", "statement_type": "balance", "expected_metric_code": "current_assets_total", "required": true},
-    {"id": "p18", "label": "非流动资产合计", "statement_type": "balance", "expected_metric_code": "noncurrent_assets_total", "required": true},
-    {"id": "p19", "label": "货币资金", "statement_type": "balance", "expected_metric_code": "cash_and_cash_equivalents", "required": true},
-    {"id": "p20", "label": "存货", "statement_type": "balance", "expected_metric_code": "inventory", "required": true},
-    {"id": "p21", "label": "应收账款", "statement_type": "balance", "expected_metric_code": "accounts_receivable", "required": true},
-    {"id": "p22", "label": "合同资产", "statement_type": "balance", "expected_metric_code": "contract_assets", "required": true},
-    {"id": "p23", "label": "合同负债", "statement_type": "balance", "expected_metric_code": "contract_liabilities", "required": true},
-    {"id": "p24", "label": "归属于母公司股东权益合计", "statement_type": "balance", "expected_metric_code": "total_equity_parent", "required": true},
-    {"id": "p25", "label": "所有者权益合计", "statement_type": "balance", "expected_metric_code": "total_equity", "required": true},
-    {"id": "p26", "label": "负债和所有者权益总计", "statement_type": "balance", "expected_metric_code": "total_liabilities_equity", "required": true},
-    {"id": "p27", "label": "附注_合同资产（已执行新准则）", "statement_type": "balance", "expected_metric_code": "contract_assets", "required": true},
-    {"id": "p28", "label": "[837270] 附注_合同资产（已执行新准则）", "statement_type": "balance", "expected_metric_code": "contract_assets", "required": true},
-    {"id": "p29", "label": "附注_使用权资产（已执行新准则）", "statement_type": "balance", "expected_metric_code": "right_of_use_assets", "required": true},
-    {"id": "p30", "label": "[821110] 附注_使用权资产（已执行新准则）", "statement_type": "balance", "expected_metric_code": "right_of_use_assets", "required": true},
-
-    {"id": "n01", "label": "合计", "statement_type": "balance", "expected_metric_code": null, "required": true},
-    {"id": "n02", "label": "其他", "statement_type": "income", "expected_metric_code": null, "required": true},
-    {"id": "n03", "label": "至 年", "statement_type": "balance", "expected_metric_code": null, "required": true},
-    {"id": "n04", "label": "价）", "statement_type": "balance", "expected_metric_code": null, "required": true},
-    {"id": "n05", "label": "100.00% ,020.", "statement_type": "balance", "expected_metric_code": null, "required": true},
-    {"id": "n06", "label": "生猪 折旧 12.69% 11.27% 17.08%", "statement_type": "income", "expected_metric_code": null, "required": true},
-    {"id": "n07", "label": "其中:合同资产减值准备", "statement_type": "balance", "expected_metric_code": null, "required": true},
-    {"id": "n08", "label": "[999999] 虚构科目", "statement_type": "balance", "expected_metric_code": null, "required": true},
-
-    {"id": "s01", "label": "资产合计", "statement_type": "balance", "expected_metric_code": "total_assets", "required": false},
-    {"id": "s02", "label": "流动负债", "statement_type": "balance", "expected_metric_code": null, "required": false},
-    {"id": "s03", "label": "非流动负债", "statement_type": "balance", "expected_metric_code": null, "required": false},
-    {"id": "s04", "label": "其中：营业收入", "statement_type": "income", "expected_metric_code": "revenue", "required": false}
+    {
+      "id": "p01",
+      "label": "营业收入",
+      "statement_type": "income",
+      "expected_metric_code": "revenue",
+      "required": true
+    },
+    {
+      "id": "p02",
+      "label": "一、营业收入",
+      "statement_type": "income",
+      "expected_metric_code": "revenue",
+      "required": true
+    },
+    {
+      "id": "p03",
+      "label": "营业成本",
+      "statement_type": "income",
+      "expected_metric_code": "operating_cost",
+      "required": true
+    },
+    {
+      "id": "p04",
+      "label": "二、营业成本",
+      "statement_type": "income",
+      "expected_metric_code": "operating_cost",
+      "required": true
+    },
+    {
+      "id": "p05",
+      "label": "利润总额",
+      "statement_type": "income",
+      "expected_metric_code": "total_profit",
+      "required": true
+    },
+    {
+      "id": "p06",
+      "label": "净利润",
+      "statement_type": "income",
+      "expected_metric_code": "net_profit",
+      "required": true
+    },
+    {
+      "id": "p07",
+      "label": "基本每股收益",
+      "statement_type": "income",
+      "expected_metric_code": "eps_basic",
+      "required": true
+    },
+    {
+      "id": "p08",
+      "label": "稀释每股收益",
+      "statement_type": "income",
+      "expected_metric_code": "eps_diluted",
+      "required": true
+    },
+    {
+      "id": "p09",
+      "label": "经营活动产生的现金流量净额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "net_cash_flow_operating",
+      "required": true
+    },
+    {
+      "id": "p10",
+      "label": "投资活动产生的现金流量净额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "net_cash_flow_investing",
+      "required": true
+    },
+    {
+      "id": "p11",
+      "label": "筹资活动产生的现金流量净额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "net_cash_flow_financing",
+      "required": true
+    },
+    {
+      "id": "p12",
+      "label": "现金及现金等价物净增加额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "net_increase_cash",
+      "required": true
+    },
+    {
+      "id": "p12b",
+      "label": "汇率变动对现金及现金等价物的影响",
+      "statement_type": "cashflow",
+      "expected_metric_code": "fx_effect_on_cash",
+      "required": true
+    },
+    {
+      "id": "p13",
+      "label": "期初现金及现金等价物余额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_begin",
+      "required": true
+    },
+    {
+      "id": "p14",
+      "label": "期末现金及现金等价物余额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_end",
+      "required": true
+    },
+    {
+      "id": "p15",
+      "label": "资产总计",
+      "statement_type": "balance",
+      "expected_metric_code": "total_assets",
+      "required": true
+    },
+    {
+      "id": "p16",
+      "label": "负债合计",
+      "statement_type": "balance",
+      "expected_metric_code": "total_liabilities",
+      "required": true
+    },
+    {
+      "id": "p17",
+      "label": "流动资产合计",
+      "statement_type": "balance",
+      "expected_metric_code": "current_assets_total",
+      "required": true
+    },
+    {
+      "id": "p18",
+      "label": "非流动资产合计",
+      "statement_type": "balance",
+      "expected_metric_code": "noncurrent_assets_total",
+      "required": true
+    },
+    {
+      "id": "p19",
+      "label": "货币资金",
+      "statement_type": "balance",
+      "expected_metric_code": "cash_and_cash_equivalents",
+      "required": true
+    },
+    {
+      "id": "p20",
+      "label": "存货",
+      "statement_type": "balance",
+      "expected_metric_code": "inventory",
+      "required": true
+    },
+    {
+      "id": "p21",
+      "label": "应收账款",
+      "statement_type": "balance",
+      "expected_metric_code": "accounts_receivable",
+      "required": true
+    },
+    {
+      "id": "p22",
+      "label": "合同资产",
+      "statement_type": "balance",
+      "expected_metric_code": "contract_assets",
+      "required": true
+    },
+    {
+      "id": "p23",
+      "label": "合同负债",
+      "statement_type": "balance",
+      "expected_metric_code": "contract_liabilities",
+      "required": true
+    },
+    {
+      "id": "p24",
+      "label": "归属于母公司股东权益合计",
+      "statement_type": "balance",
+      "expected_metric_code": "total_equity_parent",
+      "required": true
+    },
+    {
+      "id": "p25",
+      "label": "所有者权益合计",
+      "statement_type": "balance",
+      "expected_metric_code": "total_equity",
+      "required": true
+    },
+    {
+      "id": "p26",
+      "label": "负债和所有者权益总计",
+      "statement_type": "balance",
+      "expected_metric_code": "total_liabilities_equity",
+      "required": true
+    },
+    {
+      "id": "p27",
+      "label": "附注_合同资产（已执行新准则）",
+      "statement_type": "balance",
+      "expected_metric_code": "contract_assets",
+      "required": true
+    },
+    {
+      "id": "p28",
+      "label": "[837270] 附注_合同资产（已执行新准则）",
+      "statement_type": "balance",
+      "expected_metric_code": "contract_assets",
+      "required": true
+    },
+    {
+      "id": "p29",
+      "label": "附注_使用权资产（已执行新准则）",
+      "statement_type": "balance",
+      "expected_metric_code": "right_of_use_assets",
+      "required": true
+    },
+    {
+      "id": "p30",
+      "label": "[821110] 附注_使用权资产（已执行新准则）",
+      "statement_type": "balance",
+      "expected_metric_code": "right_of_use_assets",
+      "required": true
+    },
+    {
+      "id": "p31",
+      "label": "五、净利润（净亏损以负号填列）",
+      "statement_type": "income",
+      "expected_metric_code": "net_profit",
+      "required": true
+    },
+    {
+      "id": "p32",
+      "label": "二、营业利润（亏损以负号填列）",
+      "statement_type": "income",
+      "expected_metric_code": "operating_profit",
+      "required": true
+    },
+    {
+      "id": "p33",
+      "label": "投资收益（损失以负号填列）",
+      "statement_type": "income",
+      "expected_metric_code": "investment_income",
+      "required": true
+    },
+    {
+      "id": "p34",
+      "label": "其中：对联营企业和合营企业的投资收益",
+      "statement_type": "income",
+      "expected_metric_code": "investment_income_associates",
+      "required": true
+    },
+    {
+      "id": "p35",
+      "label": "5.现金流量套期储备",
+      "statement_type": "income",
+      "expected_metric_code": "cash_flow_hedge_reserve",
+      "required": true
+    },
+    {
+      "id": "p36",
+      "label": "购建固定资产、无形资产和其他长期资产支付的现金",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_paid_for_long_term_assets",
+      "required": true
+    },
+    {
+      "id": "p37",
+      "label": "分配股利、利润或偿付利息支付的现金",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_paid_dividends_interest",
+      "required": true
+    },
+    {
+      "id": "p38",
+      "label": "租赁负债",
+      "statement_type": "balance",
+      "expected_metric_code": "lease_liability",
+      "required": true
+    },
+    {
+      "id": "p39",
+      "label": "长期应付款",
+      "statement_type": "balance",
+      "expected_metric_code": "long_term_payables",
+      "required": true
+    },
+    {
+      "id": "p40",
+      "label": "少数股东权益",
+      "statement_type": "balance",
+      "expected_metric_code": "minority_interest",
+      "required": true
+    },
+    {
+      "id": "p41",
+      "label": "流动负债合计",
+      "statement_type": "balance",
+      "expected_metric_code": "current_liabilities_total",
+      "required": true
+    },
+    {
+      "id": "p42",
+      "label": "非流动负债合计",
+      "statement_type": "balance",
+      "expected_metric_code": "noncurrent_liabilities_total",
+      "required": true
+    },
+    {
+      "id": "p43",
+      "label": "应收股利",
+      "statement_type": "balance",
+      "expected_metric_code": "dividends_receivable",
+      "required": true
+    },
+    {
+      "id": "p44",
+      "label": "应付股利",
+      "statement_type": "balance",
+      "expected_metric_code": "dividends_payable",
+      "required": true
+    },
+    {
+      "id": "p45",
+      "label": "经营性应收项目的减少（增加以负号填列）",
+      "statement_type": "cashflow",
+      "expected_metric_code": "operating_receivables_change",
+      "required": true
+    },
+    {
+      "id": "p46",
+      "label": "经营性应付项目的增加（减少以负号填列）",
+      "statement_type": "cashflow",
+      "expected_metric_code": "operating_payables_change",
+      "required": true
+    },
+    {
+      "id": "p47",
+      "label": "存货的减少（增加以负号填列）",
+      "statement_type": "cashflow",
+      "expected_metric_code": "inventory_change",
+      "required": true
+    },
+    {
+      "id": "p48",
+      "label": "递延所得税资产减少（增加以负号填列）",
+      "statement_type": "cashflow",
+      "expected_metric_code": "deferred_tax_assets_change",
+      "required": true
+    },
+    {
+      "id": "p49",
+      "label": "减：现金的期初余额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_begin",
+      "required": true
+    },
+    {
+      "id": "p50",
+      "label": "现金的期末余额",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_end",
+      "required": true
+    },
+    {
+      "id": "p51",
+      "label": "支付其他与投资活动有关的现金",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_paid_other_investing",
+      "required": true
+    },
+    {
+      "id": "p52",
+      "label": "子公司支付给少数股东的股利、利润",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_paid_other_financing",
+      "required": true
+    },
+    {
+      "id": "p53",
+      "label": "子公司吸收少数股东投资收到的现金",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_received_other_financing",
+      "required": true
+    },
+    {
+      "id": "p54",
+      "label": "固定资产折旧、油气资产折耗、生产性生物资产折旧",
+      "statement_type": "cashflow",
+      "expected_metric_code": "depreciation_amortization",
+      "required": true
+    },
+    {
+      "id": "p55",
+      "label": "3.其他权益工具投资公允价值变动",
+      "statement_type": "income",
+      "expected_metric_code": "oci_fv_change_other_equity_investments",
+      "required": true
+    },
+    {
+      "id": "p56",
+      "label": "（一）不能重分类进损益的其他综合收益",
+      "statement_type": "income",
+      "expected_metric_code": "other_comprehensive_income_not_reclassifiable",
+      "required": true
+    },
+    {
+      "id": "p57",
+      "label": "收到的税费返还",
+      "statement_type": "cashflow",
+      "expected_metric_code": "tax_refund_received",
+      "required": true
+    },
+    {
+      "id": "n01",
+      "label": "合计",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n02",
+      "label": "其他",
+      "statement_type": "income",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n03",
+      "label": "至 年",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n04",
+      "label": "价）",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n05",
+      "label": "100.00% ,020.",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n06",
+      "label": "生猪 折旧 12.69% 11.27% 17.08%",
+      "statement_type": "income",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n07",
+      "label": "其中:合同资产减值准备",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "n08",
+      "label": "[999999] 虚构科目",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": true
+    },
+    {
+      "id": "s01",
+      "label": "资产合计",
+      "statement_type": "balance",
+      "expected_metric_code": "total_assets",
+      "required": false
+    },
+    {
+      "id": "s02",
+      "label": "流动负债",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": false
+    },
+    {
+      "id": "s03",
+      "label": "非流动负债",
+      "statement_type": "balance",
+      "expected_metric_code": null,
+      "required": false
+    },
+    {
+      "id": "s04",
+      "label": "其中：营业收入",
+      "statement_type": "income",
+      "expected_metric_code": "revenue",
+      "required": false
+    }
   ]
 }

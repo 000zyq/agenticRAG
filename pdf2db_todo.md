@@ -67,6 +67,23 @@
    - validation:
      - added synthetic rowspan/colspan test
      - no regression on table-detection and non-integration test suite
+6. Done (phase-2): reduced `mineru raw_*` by fixing metric normalization + dictionary merge + row-level statement fallback.
+   - root causes identified:
+     - metric matching: missing common aliases/metrics + noisy label wrappers (`一、`, `其中：`, `（损失以...号填列）`)
+     - merge bug: when dictionary existed, base patterns for same `metric_code` were ignored
+     - parser/type coupling: some rows in mixed tables were forced into table-level statement type
+   - fixes shipped:
+     - stronger `normalize_label` cleanup (prefix/annotation removal)
+     - added high-frequency metrics/aliases (e.g. `investment_income`, `lease_liability`, `minority_interest`, `cash_paid_dividends_interest`)
+     - merged base+dictionary patterns for same `metric_code` (union instead of replace)
+     - row-level statement fallback when table-level type mismatches row metric
+     - skip low-quality unmatched labels to avoid noisy `raw_*`
+   - measured impact on sample report (`report_id=2`):
+     - `mineru flow raw`: `133/315 (42.22%) -> 3/321 (0.93%)`
+     - `mineru stock raw`: `39/228 (17.11%) -> 0/229 (0.00%)`
+     - `pypdf flow raw`: `14/161 (8.70%) -> 6/189 (3.17%)`
+     - `pypdf stock raw`: `8/136 (5.88%) -> 1/162 (0.62%)`
+   - current residual raw labels are only long-tail items (e.g. `收到的税费返还`, `3.其他权益工具投资公允价值变动`).
 
 ### Done
 9. append-candidates can now write/update `report_pages` via `--write-pages`; MinerU uses `_content_list.json` to split pages.

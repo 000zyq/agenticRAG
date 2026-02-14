@@ -81,3 +81,23 @@ def test_match_metric_cas_mapping_skips_ambiguous(monkeypatch):
 
     matched = md.match_metric("[999999] 示例科目", "balance")
     assert matched is None
+
+
+def test_match_metric_cas_mapping_unmapped_falls_back_to_cas_code(monkeypatch):
+    monkeypatch.setattr(md, "METRIC_DEFS", [])
+    monkeypatch.setattr(md, "METRIC_BY_CODE", {})
+    monkeypatch.setattr(
+        md,
+        "CAS2020_MAPPING",
+        {
+            "by_sub_code": {},
+            "by_sub_name": {},
+            "by_sub_code_unmapped": {"837460": "租赁负债"},
+            "by_sub_name_unmapped": {"租赁负债": "837460"},
+        },
+    )
+
+    matched = md.match_metric("租赁负债", "balance")
+    assert matched is not None
+    assert matched["metric_code"] == "cas2020_837460"
+    assert matched["value_nature"] == "stock"
