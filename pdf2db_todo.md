@@ -30,6 +30,61 @@
    - CAS2020 merge path now applies stop-label/short-deny filters before adding aliases
 8. Done: short labels (<=2 chars) are normalized to exact-match bucket at dictionary load time; generic short labels are dropped.
 
+### P2
+1. Done: make candidate resolution column-aware to stabilize current-period selection in single-engine runs.
+   - `resolve_fact_candidates` now prefers `col_1/current/本期/最新年份` over prior columns when agreement counts are tied.
+   - cash consistency check for `2024-12-31` now passes for both consolidated and parent scope on the sample report.
+2. Done: increase multi-engine agreement coverage (`multi_engine_groups_with_multi`) by running stable dual-engine ingest (`pypdf + mineru`) into separate versions.
+   - fixed MinerU false-negative path: even if MinerU CLI exits non-zero, parser now consumes generated `*_content_list.json` / markdown artifacts when present.
+   - validated on sample report with cached MinerU output:
+     - `multi_engine_groups_with_multi`: `0 -> 135`
+     - `multi_engine_agreement_rate`: `1.0`
+3. Done: stabilize cashflow identity `net_increase_eq_sum_cashflows` under multi-engine consensus.
+   - added explicit metric mapping for `fx_effect_on_cash` (`汇率变动对现金及现金等价物的影响`).
+   - consistency formula now uses `经营 + 投资 + 筹资 + 汇率影响 = 现金净增加额` when FX metric is available.
+   - latest run (`report_id=2`): all cashflow consistency checks pass for both scopes and both periods.
+4. In progress: reduce single-engine-only groups (coverage gap between `pypdf` and `mineru`).
+   - current breakdown on `report_id=2` latest dual-engine run:
+     - total groups: `386`
+     - multi-engine groups: `158`
+     - single-engine groups: `228` = `mineru-only 215` + `pypdf-only 13`
+   - flow: `pypdf=99`, `mineru=273`, overlap=`90`
+   - stock: `pypdf=72`, `mineru=100`, overlap=`68`
+   - primary hypothesis: `pypdf` recall is lower on complex OCR/table pages; secondary cause is key split by metadata (`unit/currency/scope`) and residual `raw_*` metric fragmentation.
+   - next step:
+     - add coverage diff report by metric/date/scope and track top missing metrics per engine
+     - normalize grouping metadata defaults before resolver compare
+     - improve `pypdf` table/column extraction or lower weight in consensus for low-confidence groups
+   - progress:
+     - fixed `unit` pollution from pypdf fallback (`"单位"` no longer copies full header text into `unit`)
+     - added HTML header fiscal-year parsing for labels like `2024年度/2023年度`
+     - latest run (`pypdf=52`, `mineru=53`):
+       - `pypdf` bad-unit rows: `0`
+       - `multi_engine_groups_with_multi`: `158`
+5. Done (phase-1): merged-cell-aware HTML table normalization for MinerU path.
+   - parser now expands `rowspan/colspan` into a logical grid before row/column extraction.
+   - multi-header rows are merged into stable column labels, supporting patterns like `2024年度 本期` / `2023年度 上期`.
+   - validation:
+     - added synthetic rowspan/colspan test
+     - no regression on table-detection and non-integration test suite
+6. Done (phase-2): reduced `mineru raw_*` by fixing metric normalization + dictionary merge + row-level statement fallback.
+   - root causes identified:
+     - metric matching: missing common aliases/metrics + noisy label wrappers (`一、`, `其中：`, `（损失以...号填列）`)
+     - merge bug: when dictionary existed, base patterns for same `metric_code` were ignored
+     - parser/type coupling: some rows in mixed tables were forced into table-level statement type
+   - fixes shipped:
+     - stronger `normalize_label` cleanup (prefix/annotation removal)
+     - added high-frequency metrics/aliases (e.g. `investment_income`, `lease_liability`, `minority_interest`, `cash_paid_dividends_interest`)
+     - merged base+dictionary patterns for same `metric_code` (union instead of replace)
+     - row-level statement fallback when table-level type mismatches row metric
+     - skip low-quality unmatched labels to avoid noisy `raw_*`
+   - measured impact on sample report (`report_id=2`):
+     - `mineru flow raw`: `133/315 (42.22%) -> 3/321 (0.93%)`
+     - `mineru stock raw`: `39/228 (17.11%) -> 0/229 (0.00%)`
+     - `pypdf flow raw`: `14/161 (8.70%) -> 6/189 (3.17%)`
+     - `pypdf stock raw`: `8/136 (5.88%) -> 1/162 (0.62%)`
+   - current residual raw labels are only long-tail items (e.g. `收到的税费返还`, `3.其他权益工具投资公允价值变动`).
+
 ### Done
 9. append-candidates can now write/update `report_pages` via `--write-pages`; MinerU uses `_content_list.json` to split pages.
 10. parser now uses post-table context for unit/currency detection and infers `statement_type` from row labels when missing.

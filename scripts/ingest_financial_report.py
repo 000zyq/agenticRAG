@@ -12,6 +12,7 @@ from app.ingest.metric_defs import (
     infer_statement_type_from_rows,
     match_metric,
     metric_code_from_label,
+    normalize_label,
 )
 
 
@@ -75,10 +76,70 @@ def _env_bool(name: str, default: bool) -> bool:
 
 CORE_STATEMENTS_ONLY = _env_bool("INGEST_CORE_STATEMENTS_ONLY", True)
 MIN_METRIC_ROWS_PER_TABLE = int(os.getenv("MIN_METRIC_ROWS_PER_TABLE", "2"))
+ALL_STATEMENT_TYPES = ("income", "balance", "cashflow")
+LOW_QUALITY_UNMATCHED_LABELS = {
+    "其他",
+    "合计",
+    "小计",
+    "金额",
+    "项目",
+    "列",
+    "影响",
+    "费用税金",
+}
 
 
 def _match_metric(label: str, statement_type: str) -> dict | None:
     return match_metric(label, statement_type)
+
+
+def _match_metric_with_fallback(label: str, preferred_statement: str) -> tuple[dict | None, str]:
+    metric = _match_metric(label, preferred_statement)
+    if metric:
+        return metric, preferred_statement
+
+    fallback_hits: list[tuple[dict, str]] = []
+    for statement_type in ALL_STATEMENT_TYPES:
+        if statement_type == preferred_statement:
+            continue
+        matched = _match_metric(label, statement_type)
+        if matched:
+            fallback_hits.append((matched, statement_type))
+
+    if len(fallback_hits) == 1:
+        return fallback_hits[0]
+    return None, preferred_statement
+
+
+def _count_rows_for_statement(rows, statement_type: str) -> int:
+    return sum(1 for row in rows if _match_metric(row.label, statement_type))
+
+
+def _pick_statement_type(rows, preferred_statement: str | None) -> tuple[str | None, int]:
+    scores = {statement_type: _count_rows_for_statement(rows, statement_type) for statement_type in ALL_STATEMENT_TYPES}
+    if preferred_statement and scores.get(preferred_statement, 0) >= MIN_METRIC_ROWS_PER_TABLE:
+        return preferred_statement, scores[preferred_statement]
+
+    best_statement = max(scores, key=scores.get)
+    best_score = scores[best_statement]
+    if best_score == 0:
+        return preferred_statement, 0
+    return best_statement, best_score
+
+
+def _is_low_quality_unmatched_label(label: str) -> bool:
+    norm = normalize_label(label)
+    if not norm:
+        return True
+    if len(norm) <= 2:
+        return True
+    if norm in LOW_QUALITY_UNMATCHED_LABELS:
+        return True
+    if norm.endswith("分类") or "分类" in norm:
+        return True
+    if re.fullmatch(r"[0-9a-z]+", norm):
+        return True
+    return False
 
 
 def _get_or_create_company(cur, name: str | None, ticker: str | None, now: datetime) -> int | None:
@@ -239,19 +300,14 @@ def _insert_facts_for_table(
         return 0, 0
 
     mapped_statement = STATEMENT_TYPE_MAP.get(table.statement_type or "")
-    matched_rows = 0
-    if mapped_statement:
-        matched_rows = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
-        if matched_rows == 0:
-            inferred = infer_statement_type_from_rows(table.rows)
-            if inferred:
-                mapped_statement = inferred
-    else:
+    if not mapped_statement:
         mapped_statement = infer_statement_type_from_rows(table.rows)
     if not mapped_statement:
         return 0, 0
-    if matched_rows == 0:
-        matched_rows = sum(1 for row in table.rows if _match_metric(row.label, mapped_statement))
+
+    mapped_statement, matched_rows = _pick_statement_type(table.rows, mapped_statement)
+    if not mapped_statement:
+        return 0, 0
     if matched_rows < MIN_METRIC_ROWS_PER_TABLE:
         return 0, 0
 
@@ -271,12 +327,14 @@ def _insert_facts_for_table(
             continue
         if "公司" in label and len(label) > 30:
             continue
-        metric_def = _match_metric(row.label, mapped_statement)
+        metric_def, metric_statement = _match_metric_with_fallback(row.label, mapped_statement)
+        if metric_def is None and _is_low_quality_unmatched_label(row.label):
+            continue
         metric_id = _get_or_create_metric(
             cur,
             metric_def,
             row.label,
-            mapped_statement,
+            metric_statement,
             table_units,
             now,
             metric_cache,
@@ -311,7 +369,8 @@ def _insert_facts_for_table(
             )
             trace_id = int(cur.fetchone()[0])
 
-            if mapped_statement == "balance":
+            effective_statement = metric_statement
+            if effective_statement == "balance":
                 cur.execute(
                     """
                     INSERT INTO financial_stock_candidate (
@@ -362,7 +421,7 @@ def _insert_facts_for_table(
                             "single_engine",
                         ),
                     )
-                    stock_fact_count += 1
+                stock_fact_count += 1
             else:
                 cur.execute(
                     """
@@ -574,18 +633,131 @@ def insert_report(
                     cur.execute("DELETE FROM financial_flow_candidate WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM financial_stock_candidate WHERE report_id = %s", (report_id,))
                     cur.execute("DELETE FROM source_trace WHERE report_id = %s", (report_id,))
+                    # Rebuild table structures to avoid stale table-id/index drift across parser updates.
+                    cur.execute(
+                        """
+                        DELETE FROM report_table_cells
+                        WHERE row_id IN (
+                            SELECT r.row_id
+                            FROM report_table_rows r
+                            JOIN report_tables t ON t.table_id = r.table_id
+                            WHERE t.report_id = %s
+                        )
+                        """,
+                        (report_id,),
+                    )
+                    cur.execute(
+                        """
+                        DELETE FROM report_table_rows
+                        WHERE table_id IN (
+                            SELECT table_id FROM report_tables WHERE report_id = %s
+                        )
+                        """,
+                        (report_id,),
+                    )
+                    cur.execute(
+                        """
+                        DELETE FROM report_table_columns
+                        WHERE table_id IN (
+                            SELECT table_id FROM report_tables WHERE report_id = %s
+                        )
+                        """,
+                        (report_id,),
+                    )
+                    cur.execute("DELETE FROM report_tables WHERE report_id = %s", (report_id,))
 
                     stage = "recompute_facts_insert"
-                    existing_table_ids, existing_row_map = _load_existing_table_row_map(cur, report_id)
                     metric_cache: dict[str, int] = {}
                     flow_fact_count = 0
                     stock_fact_count = 0
-                    for table_idx, table in enumerate(tables):
-                        table_id = existing_table_ids[table_idx] if table_idx < len(existing_table_ids) else None
-                        row_ids = None
-                        if table_id is not None:
-                            row_index_map = existing_row_map.get(table_id, {})
-                            row_ids = [row_index_map.get(row_idx) for row_idx in range(len(table.rows))]
+                    for table in tables:
+                        table_currency = table.currency or meta.currency
+                        table_units = table.units or meta.units
+                        table_currency_status = "detected" if table_currency else "missing"
+                        table_units_status = "detected" if table_units else "missing"
+
+                        cur.execute(
+                            """
+                            INSERT INTO report_tables (
+                                report_id, section_title, statement_type, title, page_start, page_end,
+                                currency, units, is_consolidated, currency_status, units_status,
+                                extra, created_at
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            RETURNING table_id
+                            """,
+                            (
+                                report_id,
+                                table.section_title,
+                                table.statement_type,
+                                table.title,
+                                table.page_start,
+                                table.page_end,
+                                table_currency,
+                                table_units,
+                                table.is_consolidated,
+                                table_currency_status,
+                                table_units_status,
+                                None,
+                                now,
+                            ),
+                        )
+                        table_id = int(cur.fetchone()[0])
+
+                        column_ids: list[int] = []
+                        for idx, col in enumerate(table.columns):
+                            cur.execute(
+                                """
+                                INSERT INTO report_table_columns (
+                                    table_id, column_index, label, period_start, period_end,
+                                    fiscal_year, fiscal_period, extra, created_at
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                RETURNING column_id
+                                """,
+                                (
+                                    table_id,
+                                    idx,
+                                    col.label,
+                                    col.period_start,
+                                    col.period_end,
+                                    col.fiscal_year,
+                                    col.fiscal_period,
+                                    None,
+                                    now,
+                                ),
+                            )
+                            column_ids.append(int(cur.fetchone()[0]))
+
+                        row_ids: list[int] = []
+                        for idx, row in enumerate(table.rows):
+                            is_total = "合计" in row.label or "total" in row.label.lower()
+                            cur.execute(
+                                """
+                                INSERT INTO report_table_rows (
+                                    table_id, row_index, label, level, is_total, page_number, extra, created_at
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                RETURNING row_id
+                                """,
+                                (table_id, idx, row.label, None, is_total, row.page_number, None, now),
+                            )
+                            row_ids.append(int(cur.fetchone()[0]))
+
+                        for row_id, row in zip(row_ids, table.rows):
+                            for col_id, cell in zip(column_ids, row.cells):
+                                if cell.value is None and not cell.raw_text:
+                                    continue
+                                cur.execute(
+                                    """
+                                    INSERT INTO report_table_cells (
+                                        row_id, column_id, value, raw_text, unit, extra, created_at
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                    """,
+                                    (row_id, col_id, cell.value, cell.raw_text, table_units, None, now),
+                                )
+
                         flow_inc, stock_inc = _insert_facts_for_table(
                             cur,
                             report_id,

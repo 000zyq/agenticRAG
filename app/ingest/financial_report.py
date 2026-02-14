@@ -36,9 +36,12 @@ UNIT_PATTERNS = [
 NUMBER_RE = re.compile(r"(?<![\w.%])[\(]?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?[\)]?(?![\w.%])")
 DATE_RE = re.compile(r"(20\d{2})\s*[年\-/]\s*(\d{1,2})\s*[月\-/]\s*(\d{1,2})")
 YEAR_RE = re.compile(r"(20\d{2})")
+UNIT_HINT_RE = re.compile(r"单位\s*[:：]?\s*([^\n；;。]{1,24})")
 HTML_TABLE_RE = re.compile(r"<table\b.*?>.*?</table>", re.IGNORECASE | re.DOTALL)
 HTML_ROW_RE = re.compile(r"<tr\b.*?>.*?</tr>", re.IGNORECASE | re.DOTALL)
 HTML_CELL_RE = re.compile(r"<t[dh]\b.*?>.*?</t[dh]>", re.IGNORECASE | re.DOTALL)
+HTML_CELL_OPEN_RE = re.compile(r"^<t[dh]\b([^>]*)>", re.IGNORECASE | re.DOTALL)
+HTML_SPAN_RE = re.compile(r"\b(?P<name>rowspan|colspan)\s*=\s*['\"]?(?P<value>\d+)", re.IGNORECASE)
 ELR_CODE_RE = re.compile(r"[\[【]\s*([0-9]{6}[a-z]?)\s*[\]】]", re.IGNORECASE)
 
 
@@ -277,7 +280,9 @@ def _mineru_extract(path: Path) -> list[PageContent] | None:
         try:
             subprocess.run(cmd, shell=True, check=True, env=mineru_env)
         except subprocess.CalledProcessError:
-            return None
+            # MinerU may still generate output files even when CLI exits non-zero.
+            # Continue and try to load parsed artifacts from output_root.
+            pass
         content_list = _find_mineru_content_list(output_root, path)
         if content_list:
             pages = _mineru_pages_from_content_list(content_list)
@@ -351,9 +356,28 @@ def _detect_units(text: str) -> tuple[str | None, str | None]:
                 currency = currency or cur
             if unit:
                 units = units or unit
-    if "单位" in text and not units:
-        units = text.strip()
+    if units is None:
+        match = UNIT_HINT_RE.search(text)
+        if match:
+            hint = match.group(1).strip()
+            for needle, cur, unit in UNIT_PATTERNS:
+                if needle in hint:
+                    if cur:
+                        currency = currency or cur
+                    if unit:
+                        units = unit
+                        break
     return currency, units
+
+
+def _extract_fiscal_year(label: str) -> int | None:
+    match = YEAR_RE.search(label)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
 
 
 def _parse_date_from_text(text: str) -> date | None:
@@ -399,6 +423,76 @@ def _html_cell_text(cell_html: str) -> str:
     cleaned = cleaned.replace("\u00a0", " ")
     cleaned = re.sub(r"\\s{2,}", " ", cleaned)
     return cleaned.strip()
+
+
+def _html_cell_spans(cell_html: str) -> tuple[int, int]:
+    open_match = HTML_CELL_OPEN_RE.match(cell_html.strip())
+    attrs = open_match.group(1) if open_match else ""
+    rowspan = 1
+    colspan = 1
+    for match in HTML_SPAN_RE.finditer(attrs):
+        name = match.group("name").lower()
+        try:
+            value = int(match.group("value"))
+        except ValueError:
+            continue
+        value = max(value, 1)
+        if name == "rowspan":
+            rowspan = value
+        elif name == "colspan":
+            colspan = value
+    return rowspan, colspan
+
+
+def _expand_html_rows(raw_rows: list[list[tuple[str, int, int]]]) -> list[list[str]]:
+    expanded_rows: list[dict[int, str]] = []
+    active: dict[int, tuple[str, int]] = {}
+
+    for raw_cells in raw_rows:
+        row_map: dict[int, str] = {}
+
+        for col_idx, (text, remaining) in list(active.items()):
+            row_map[col_idx] = text
+            if remaining <= 1:
+                del active[col_idx]
+            else:
+                active[col_idx] = (text, remaining - 1)
+
+        col = 0
+        for text, rowspan, colspan in raw_cells:
+            for _ in range(colspan):
+                while col in row_map:
+                    col += 1
+                row_map[col] = text
+                if rowspan > 1:
+                    active[col] = (text, rowspan - 1)
+                col += 1
+
+        expanded_rows.append(row_map)
+
+    max_cols = max((max(row.keys()) + 1 for row in expanded_rows if row), default=0)
+    normalized: list[list[str]] = []
+    for row in expanded_rows:
+        values = [row.get(i, "") for i in range(max_cols)]
+        normalized.append(values)
+    return normalized
+
+
+def _merge_header_rows(header_rows: list[list[str]]) -> list[str]:
+    if not header_rows:
+        return []
+    width = max((len(row) for row in header_rows), default=0)
+    merged: list[str] = []
+    for idx in range(width):
+        parts: list[str] = []
+        for row in header_rows:
+            value = row[idx].strip() if idx < len(row) else ""
+            if not value:
+                continue
+            if not parts or value != parts[-1]:
+                parts.append(value)
+        merged.append(" ".join(parts).strip())
+    return merged
 
 
 def _parse_number(text: str) -> Decimal | None:
@@ -455,20 +549,35 @@ def _parse_html_tables(md_text: str, page_number: int) -> list[TableBlock]:
         row_htmls = HTML_ROW_RE.findall(table_html)
         if not row_htmls:
             continue
-        rows: list[list[str]] = []
+        raw_rows: list[list[tuple[str, int, int]]] = []
         for row_html in row_htmls:
             cell_htmls = HTML_CELL_RE.findall(row_html)
             if not cell_htmls:
                 continue
-            cells = [_html_cell_text(cell_html) for cell_html in cell_htmls]
-            if any(cells):
-                rows.append(cells)
+            cells: list[tuple[str, int, int]] = []
+            for cell_html in cell_htmls:
+                text = _html_cell_text(cell_html)
+                rowspan, colspan = _html_cell_spans(cell_html)
+                cells.append((text, rowspan, colspan))
+            if any(text for text, _, _ in cells):
+                raw_rows.append(cells)
+
+        rows = _expand_html_rows(raw_rows)
 
         if not rows:
             continue
 
-        header_row = rows[0]
-        data_rows = rows[1:] if _is_header_row(header_row) and len(rows) > 1 else rows
+        header_rows: list[list[str]] = []
+        data_start = 0
+        for row in rows:
+            if _is_header_row(row):
+                header_rows.append(row)
+                data_start += 1
+            else:
+                break
+
+        header_row = _merge_header_rows(header_rows) if header_rows else rows[0]
+        data_rows = rows[data_start:] if data_start < len(rows) else []
         if not data_rows:
             continue
 
@@ -477,8 +586,10 @@ def _parse_html_tables(md_text: str, page_number: int) -> list[TableBlock]:
             continue
 
         col_labels: list[str] = []
-        if _is_header_row(header_row):
+        if header_row and _is_header_row(header_row):
             col_labels = header_row[1:]
+        if len(col_labels) > num_cols:
+            col_labels = col_labels[:num_cols]
         if len(col_labels) < num_cols:
             col_labels += [f"col_{i + 1}" for i in range(len(col_labels), num_cols)]
 
@@ -486,8 +597,12 @@ def _parse_html_tables(md_text: str, page_number: int) -> list[TableBlock]:
         header_text = " ".join(col_labels)
         header_has_period = bool(YEAR_RE.findall(header_text)) or ("本期" in header_text) or ("上期" in header_text)
         for label in col_labels:
-            fiscal_year = int(label) if label.isdigit() and len(label) == 4 else None
-            period_end = _parse_date_from_text(label) or _parse_date_from_text(context)
+            fiscal_year = _extract_fiscal_year(label)
+            period_end = _parse_date_from_text(label)
+            if period_end is None and fiscal_year is not None:
+                period_end = date(fiscal_year, 12, 31)
+            if period_end is None:
+                period_end = _parse_date_from_text(context)
             columns.append(TableColumn(label=label, fiscal_year=fiscal_year, period_end=period_end))
 
         table_rows: list[TableRow] = []
