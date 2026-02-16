@@ -334,7 +334,7 @@ function DiscrepancyResolver() {
 
   const nextUnresolved = useCallback(() => {
     if (items.length === 0) return;
-    const start = ((selectedIdx >= 0 ? selectedIdx : -1) + 1) % items.length;
+    const start = (selectedIdx + 1) % items.length;
     for (let offset = 0; offset < items.length; offset += 1) {
       const idx = (start + offset) % items.length;
       if (items[idx].resolution?.resolution_method !== "manual") {
