@@ -61,3 +61,24 @@ def test_mineru_extract_returns_none_when_no_artifacts(tmp_path, monkeypatch) ->
 
     pages = _mineru_extract(pdf_path)
     assert pages is None
+
+
+def test_mineru_extract_reads_static_output_path_in_cmd(tmp_path, monkeypatch) -> None:
+    output_root = tmp_path / "fixed_output"
+    report_stem = "sample_report"
+    auto_dir = output_root / report_stem / "auto"
+    auto_dir.mkdir(parents=True, exist_ok=True)
+    _write_content_list(auto_dir / f"{report_stem}_content_list.json")
+
+    pdf_path = tmp_path / f"{report_stem}.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n%mock")
+
+    monkeypatch.delenv("MINERU_OUTPUT_DIR", raising=False)
+    monkeypatch.setenv("MINERU_CMD", f"dummy_cmd -p {{input}} -o {output_root}")
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: None)
+
+    pages = _mineru_extract(pdf_path)
+    assert pages is not None
+    assert len(pages) == 1
+    assert pages[0].page == 1
+    assert "测试正文" in pages[0].text_md

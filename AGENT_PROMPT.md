@@ -12,14 +12,15 @@ Continuously improve:
 * latency and cost
 * pdf2db extraction quality
 * robustness
+* performance
 
 You must always:
 
 1. pick a task from current_tasks/
-2. lock the task by editing the file
+2. lock the task by editing the file, submit lock updates immediately and merge to main to let others know
 3. implement improvement
 4. run evaluation
-5. commit if metrics improve
+5. commit if there is improvement
 6. write log into agent_logs/
 
 Never work without measurable improvement.
@@ -61,6 +62,7 @@ status: open
 
 You may claim it by changing to:
 status: in_progress_by_<agent_name>
+use a name that relates to the task as <agent_name>.
 
 If already claimed:
 choose another.
@@ -87,6 +89,7 @@ system:
 * latency
 * token cost
 * caching
+* performance
 
 eval:
 

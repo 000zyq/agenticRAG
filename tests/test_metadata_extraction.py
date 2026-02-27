@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from app.ingest.financial_report import PageContent, _extract_metadata
 
 
@@ -17,3 +19,19 @@ def test_extract_metadata_from_head() -> None:
     assert meta.report_type == "annual"
     assert meta.fiscal_year == 2024
     assert meta.period_end is not None
+
+
+def test_extract_metadata_quarterly_default_period_end() -> None:
+    pages = [
+        PageContent(
+            page=1,
+            text_raw="公司名称：季度测试股份有限公司\n2024年第三季度报告\n股票代码：654321",
+            text_md="",
+        )
+    ]
+    meta = _extract_metadata(pages)
+    assert meta.company_name == "季度测试股份有限公司"
+    assert meta.ticker == "654321"
+    assert meta.report_type == "q3"
+    assert meta.fiscal_year == 2024
+    assert meta.period_end == date(2024, 9, 30)

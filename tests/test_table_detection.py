@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.ingest.financial_report import PageContent, _detect_table_blocks
+from app.ingest.financial_report import PageContent, _detect_is_consolidated, _detect_table_blocks
 
 
 def test_detect_table_blocks_simple() -> None:
@@ -87,3 +87,92 @@ def test_detect_table_blocks_handles_rowspan_colspan_header() -> None:
         "投资活动产生的现金流量净额",
         "筹资活动产生的现金流量净额",
     ]
+
+
+def test_detect_table_blocks_plaintext_year_columns_get_distinct_period_end() -> None:
+    text = """
+合并现金流量表
+2024年12月31日
+项目 2024年度 2023年度
+经营活动产生的现金流量净额 1,000 900
+投资活动产生的现金流量净额 -2,000 -1,800
+筹资活动产生的现金流量净额 3,000 2,700
+""".strip()
+    pages = [PageContent(page=1, text_raw=text, text_md=text)]
+    tables = _detect_table_blocks(pages)
+    assert len(tables) == 1
+    cols = tables[0].columns
+    assert [c.fiscal_year for c in cols] == [2024, 2023]
+    assert [c.period_end.isoformat() if c.period_end else None for c in cols] == [
+        "2024-12-31",
+        "2023-12-31",
+    ]
+
+
+def test_detect_is_consolidated_explicit_only() -> None:
+    assert _detect_is_consolidated("合并现金流量表") is True
+    assert _detect_is_consolidated("母公司现金流量表") is False
+    assert _detect_is_consolidated("现金流量表") is None
+
+
+def test_detect_table_blocks_plaintext_two_columns_default_to_current_prior() -> None:
+    text = """
+合并现金流量表
+项目 金额A 金额B
+经营活动产生的现金流量净额 1,000 900
+投资活动产生的现金流量净额 -2,000 -1,800
+筹资活动产生的现金流量净额 3,000 2,700
+""".strip()
+    pages = [PageContent(page=1, text_raw=text, text_md=text)]
+    tables = _detect_table_blocks(pages)
+    assert len(tables) == 1
+    assert [c.label for c in tables[0].columns] == ["current_period", "prior_period"]
+
+
+def test_detect_table_blocks_plaintext_keeps_rows_across_non_numeric_lines() -> None:
+    text = """
+合并现金流量表
+项目 2024 年度 2023 年度
+销售商品、提供劳务收到的现金 1,000 900
+客户存款和同业存放款项净增加额
+向中央银行借款净增加额
+收到其他与经营活动有关的现金 500 450
+经营活动现金流入小计 1,500 1,350
+""".strip()
+    pages = [PageContent(page=1, text_raw=text, text_md=text)]
+    tables = _detect_table_blocks(pages)
+    assert len(tables) == 1
+    labels = [row.label for row in tables[0].rows]
+    assert "销售商品、提供劳务收到的现金" in labels
+    assert "收到其他与经营活动有关的现金" in labels
+    assert "经营活动现金流入小计" in labels
+
+
+def test_detect_table_blocks_plaintext_keeps_single_value_metric_rows() -> None:
+    text = """
+合并现金流量表
+项目 2024 年度 2023 年度
+销售商品、提供劳务收到的现金 1,000 900
+收到的税费返还 10
+收到其他与经营活动有关的现金 500 450
+""".strip()
+    pages = [PageContent(page=1, text_raw=text, text_md=text)]
+    tables = _detect_table_blocks(pages)
+    assert len(tables) == 1
+    labels = [row.label for row in tables[0].rows]
+    assert "收到的税费返还" in labels
+
+
+def test_detect_table_blocks_plaintext_ignores_single_value_non_metric_rows() -> None:
+    text = """
+合并现金流量表
+项目 2024 年度 2023 年度
+销售商品、提供劳务收到的现金 1,000 900
+注释说明 123
+收到其他与经营活动有关的现金 500 450
+""".strip()
+    pages = [PageContent(page=1, text_raw=text, text_md=text)]
+    tables = _detect_table_blocks(pages)
+    assert len(tables) == 1
+    labels = [row.label for row in tables[0].rows]
+    assert "注释说明" not in labels

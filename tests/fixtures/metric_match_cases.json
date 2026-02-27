@@ -368,7 +368,7 @@
       "id": "p52",
       "label": "子公司支付给少数股东的股利、利润",
       "statement_type": "cashflow",
-      "expected_metric_code": "cash_paid_other_financing",
+      "expected_metric_code": "cash_paid_dividends_to_minority",
       "required": true
     },
     {
@@ -382,7 +382,7 @@
       "id": "p54",
       "label": "固定资产折旧、油气资产折耗、生产性生物资产折旧",
       "statement_type": "cashflow",
-      "expected_metric_code": "depreciation_amortization",
+      "expected_metric_code": "fixed_assets_depreciation",
       "required": true
     },
     {
@@ -404,6 +404,90 @@
       "label": "收到的税费返还",
       "statement_type": "cashflow",
       "expected_metric_code": "tax_refund_received",
+      "required": true
+    },
+    {
+      "id": "p58",
+      "label": "支付其他与筹资活动有关的现金",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_paid_other_financing",
+      "required": true
+    },
+    {
+      "id": "p59",
+      "label": "少数股东权益",
+      "statement_type": "balance",
+      "expected_metric_code": "minority_interest",
+      "required": true
+    },
+    {
+      "id": "p60",
+      "label": "少数股东权益合计",
+      "statement_type": "balance",
+      "expected_metric_code": "minority_interest",
+      "required": true
+    },
+    {
+      "id": "p61",
+      "label": "减：库存股",
+      "statement_type": "balance",
+      "expected_metric_code": "treasury_stock",
+      "required": true
+    },
+    {
+      "id": "p62",
+      "label": "其中：子公司支付给少数股东的股利、利润",
+      "statement_type": "cashflow",
+      "expected_metric_code": "cash_paid_dividends_to_minority",
+      "required": true
+    },
+    {
+      "id": "p63",
+      "label": "减：所得税费用",
+      "statement_type": "income",
+      "expected_metric_code": "income_tax",
+      "required": true
+    },
+    {
+      "id": "p64",
+      "label": "减：利息收入",
+      "statement_type": "income",
+      "expected_metric_code": "interest_income",
+      "required": true
+    },
+    {
+      "id": "p65",
+      "label": "少数股东损益",
+      "statement_type": "income",
+      "expected_metric_code": "net_profit_minority",
+      "required": true
+    },
+    {
+      "id": "p66",
+      "label": "减：营业外支出",
+      "statement_type": "income",
+      "expected_metric_code": "non_operating_expense",
+      "required": true
+    },
+    {
+      "id": "p67",
+      "label": "加：营业外收入",
+      "statement_type": "income",
+      "expected_metric_code": "non_operating_income",
+      "required": true
+    },
+    {
+      "id": "p68",
+      "label": "其中：营业成本",
+      "statement_type": "income",
+      "expected_metric_code": "operating_cost",
+      "required": true
+    },
+    {
+      "id": "p69",
+      "label": "归属于少数股东的综合收益总额",
+      "statement_type": "income",
+      "expected_metric_code": "total_comprehensive_income_minority",
       "required": true
     },
     {

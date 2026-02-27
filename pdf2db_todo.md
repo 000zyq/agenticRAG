@@ -123,3 +123,20 @@
    - fiscal year input default is empty (no implicit year filter on first load).
    - added `Clear Year` button to explicitly reset year filter during review.
    - verified in browser on `http://127.0.0.1:3001` with report `2`: active index and PDF page stay in sync during repeated next-click operations.
+20. Done (phase-1): key alignment strengthened for mixed-scope tables.
+   - added balance-sheet generic `col_*` period reconstruction (`current/prior` alternation) to reduce same-year key collapse.
+   - added row-level duplicate suppression on `(period_end, consolidation_scope)` for mixed-scope tables.
+   - result on `report_id=3` (美的2024):
+     - flow overlap groups: `85` (stable), flow conflicts: `15`
+     - stock overlap groups: `12 -> 22` (improved)
+     - stock conflicts: `12 -> 16` (still needs period-column disambiguation in pypdf `col_*` headers)
+
+21. Done: GT evaluation pipeline (csv/json) for field-level/numeric accuracy.
+   - script: `scripts/eval_pdf2db_gt.py`
+   - template: `data/ground_truth/financial_gt_template.csv`
+   - outputs:
+     - summary json (`field_accuracy`, `numeric_accuracy`, `key_hit_rate`, `table_completeness`, `table_success_rate`, `engine_hit_rate`)
+     - detail csv (per-row status: matched/missing/wrong + candidate values by engine)
+   - sample run artifacts:
+     - `tmp/gt_eval_report3.json`
+     - `tmp/gt_eval_report3_details.csv`

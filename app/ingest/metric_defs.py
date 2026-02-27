@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import hashlib
 import json
 from pathlib import Path
@@ -207,7 +208,23 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "其他收益",
         "statement_type": "income",
         "value_nature": "flow",
-        "patterns": ["其他收益", "保险赔偿", "废品销售"],
+        "patterns": ["其他收益"],
+    },
+    {
+        "metric_code": "other_income_insurance_compensation",
+        "metric_name_cn": "保险赔偿",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["保险赔偿"],
+        "parent_metric_code": "other_income",
+    },
+    {
+        "metric_code": "other_income_scrap_sales",
+        "metric_name_cn": "废品销售",
+        "statement_type": "income",
+        "value_nature": "flow",
+        "patterns": ["废品销售"],
+        "parent_metric_code": "other_income",
     },
     {
         "metric_code": "investment_income",
@@ -1002,7 +1019,15 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "支付其他与筹资活动有关的现金",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["支付其他与筹资活动有关的现金", "子公司支付给少数股东的股利、利润"],
+        "patterns": ["支付其他与筹资活动有关的现金"],
+    },
+    {
+        "metric_code": "cash_paid_dividends_to_minority",
+        "metric_name_cn": "子公司支付给少数股东的股利、利润",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "parent_metric_code": "cash_paid_other_financing",
+        "patterns": ["子公司支付给少数股东的股利、利润", "其中：子公司支付给少数股东的股利、利润"],
     },
     {
         "metric_code": "cash_received_from_capital_contributions",
@@ -1051,7 +1076,7 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "期初现金及现金等价物余额",
         "statement_type": "cashflow",
         "value_nature": "stock",
-        "patterns": ["期初现金及现金等价物余额", "现金的期初余额"],
+        "patterns": ["期初现金及现金等价物余额", "现金的期初余额", "年初现金及现金等价物余额", "现金及现金等价物的年初余额"],
     },
     {
         "metric_code": "cash_end",
@@ -1065,7 +1090,47 @@ BASE_METRIC_DEFS = [
         "metric_name_cn": "折旧及摊销",
         "statement_type": "cashflow",
         "value_nature": "flow",
-        "patterns": ["折旧及摊销", "固定资产折旧、油气资产折耗、生产性生物资产折旧", "投资性房地产折旧", "使用权资产折旧", "无形资产摊销", "长期待摊费用摊销"],
+        "patterns": ["折旧及摊销"],
+    },
+    {
+        "metric_code": "fixed_assets_depreciation",
+        "metric_name_cn": "固定资产折旧、油气资产折耗、生产性生物资产折旧",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["固定资产折旧、油气资产折耗、生产性生物资产折旧"],
+        "parent_metric_code": "depreciation_amortization",
+    },
+    {
+        "metric_code": "investment_property_depreciation",
+        "metric_name_cn": "投资性房地产折旧",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["投资性房地产折旧"],
+        "parent_metric_code": "depreciation_amortization",
+    },
+    {
+        "metric_code": "right_of_use_assets_depreciation",
+        "metric_name_cn": "使用权资产折旧",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["使用权资产折旧"],
+        "parent_metric_code": "depreciation_amortization",
+    },
+    {
+        "metric_code": "intangible_assets_amortization",
+        "metric_name_cn": "无形资产摊销",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["无形资产摊销"],
+        "parent_metric_code": "depreciation_amortization",
+    },
+    {
+        "metric_code": "long_term_prepaid_expenses_amortization",
+        "metric_name_cn": "长期待摊费用摊销",
+        "statement_type": "cashflow",
+        "value_nature": "flow",
+        "patterns": ["长期待摊费用摊销"],
+        "parent_metric_code": "depreciation_amortization",
     },
     {
         "metric_code": "asset_impairment_provision",
@@ -1197,7 +1262,88 @@ def _merge_metric_defs(base_defs: list[dict], loaded_defs: list[dict] | None) ->
     return [by_code[metric_code] for metric_code in order]
 
 
-METRIC_DEFS = _merge_metric_defs(BASE_METRIC_DEFS, _load_dictionary_file(DICTIONARY_PATH))
+PATTERN_GLOBAL_DENYLIST_NORM = {
+    _normalize_label_impl("期末账面余额"),
+    _normalize_label_impl("Balance at beginning of period"),
+    _normalize_label_impl("Balance at end of period"),
+    _normalize_label_impl("加：年初现金及现金等价物余额"),
+    _normalize_label_impl("减：现金及现金等价物的年初余额"),
+}
+
+PATTERN_PREFERRED_METRIC = {
+    ("income", _normalize_label_impl("主营业务收入")): "main_business_revenue",
+    ("income", _normalize_label_impl("营业总成本")): "operating_total_cost",
+}
+
+
+def _build_pattern_keep_map(metric_defs: list[dict]) -> dict[tuple[str, str], set[str]]:
+    pattern_keys = ("patterns", "patterns_exact", "patterns_en", "patterns_en_exact")
+    metric_parent: dict[str, str | None] = {}
+    pattern_to_codes: dict[tuple[str, str], set[str]] = defaultdict(set)
+
+    for metric in metric_defs:
+        statement_type = str(metric.get("statement_type") or "")
+        metric_code = str(metric.get("metric_code") or "")
+        metric_parent[metric_code] = metric.get("parent_metric_code")
+        for key in pattern_keys:
+            for pattern in list(metric.get(key) or []):
+                norm = _normalize_label_impl(pattern)
+                if not norm:
+                    continue
+                pattern_to_codes[(statement_type, norm)].add(metric_code)
+
+    keep_map: dict[tuple[str, str], set[str]] = {}
+    for key, metric_codes in pattern_to_codes.items():
+        if len(metric_codes) <= 1:
+            continue
+        statement_type, norm = key
+        preferred = PATTERN_PREFERRED_METRIC.get((statement_type, norm))
+        if preferred and preferred in metric_codes:
+            keep_map[key] = {preferred}
+            continue
+
+        children = {mc for mc in metric_codes if metric_parent.get(mc)}
+        if len(children) == 1:
+            keep_map[key] = children
+            continue
+
+        # Ambiguous duplicate pattern: drop from all metrics.
+        keep_map[key] = set()
+
+    return keep_map
+
+
+def _sanitize_metric_defs(metric_defs: list[dict]) -> list[dict]:
+    cleaned_defs: list[dict] = []
+    pattern_keys = ("patterns", "patterns_exact", "patterns_en", "patterns_en_exact")
+    keep_map = _build_pattern_keep_map(metric_defs)
+
+    for metric in metric_defs:
+        metric_copy = dict(metric)
+        statement_type = str(metric_copy.get("statement_type") or "")
+        metric_code = str(metric_copy.get("metric_code") or "")
+
+        for key in pattern_keys:
+            kept: list[str] = []
+            for pattern in list(metric_copy.get(key) or []):
+                norm = _normalize_label_impl(pattern)
+                if not norm:
+                    continue
+                if norm in PATTERN_GLOBAL_DENYLIST_NORM:
+                    continue
+
+                keep_codes = keep_map.get((statement_type, norm))
+                if keep_codes is not None and metric_code not in keep_codes:
+                    continue
+
+                kept.append(pattern)
+            metric_copy[key] = _dedupe_keep_order(kept)
+        cleaned_defs.append(metric_copy)
+
+    return cleaned_defs
+
+
+METRIC_DEFS = _sanitize_metric_defs(_merge_metric_defs(BASE_METRIC_DEFS, _load_dictionary_file(DICTIONARY_PATH)))
 
 
 def normalize_label(label: str) -> str:
@@ -1260,7 +1406,7 @@ EXACT_LABEL_ALIASES = {
     ("balance", normalize_label("资产合计")): "total_assets",
     ("cashflow", normalize_label("到的现金")): "cash_received_from_capital_contributions",
     ("cashflow", normalize_label("利、利润")): "cash_paid_dividends_interest",
-    ("cashflow", normalize_label("耗、生产性生物资产折旧")): "depreciation_amortization",
+    ("cashflow", normalize_label("耗、生产性生物资产折旧")): "fixed_assets_depreciation",
 }
 
 

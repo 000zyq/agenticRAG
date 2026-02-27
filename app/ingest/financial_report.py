@@ -9,10 +9,11 @@ import hashlib
 import html
 import json
 import re
+import shlex
 import subprocess
 import tempfile
 
-from app.ingest.metric_defs import infer_statement_type_from_rows
+from app.ingest.metric_defs import infer_statement_type_from_rows, match_metric
 from app.ingest.parser_pdf import parse_pdf
 
 
@@ -260,14 +261,34 @@ def _build_mineru_env() -> dict[str, str]:
     return env
 
 
+def _extract_mineru_output_arg(cmd_template: str) -> str | None:
+    try:
+        parts = shlex.split(cmd_template)
+    except ValueError:
+        return None
+    for idx, token in enumerate(parts):
+        if token in {"-o", "--output"} and idx + 1 < len(parts):
+            return parts[idx + 1]
+        if token.startswith("--output="):
+            return token.split("=", 1)[1]
+    return None
+
+
 def _mineru_extract(path: Path) -> list[PageContent] | None:
     cmd_template = os.getenv("MINERU_CMD")
     if not cmd_template:
         return None
 
     output_override = os.getenv("MINERU_OUTPUT_DIR")
+    output_arg = _extract_mineru_output_arg(cmd_template)
     if output_override:
         output_root = Path(output_override).expanduser()
+        output_root.mkdir(parents=True, exist_ok=True)
+        tmp_context = None
+    elif output_arg and "{output}" not in output_arg:
+        output_root = Path(output_arg).expanduser()
+        if not output_root.is_absolute():
+            output_root = Path.cwd() / output_root
         output_root.mkdir(parents=True, exist_ok=True)
         tmp_context = None
     else:
@@ -347,6 +368,17 @@ def _detect_statement_type(text: str) -> str | None:
     return None
 
 
+def _looks_like_table_title(text: str) -> bool:
+    stripped = text.strip()
+    if len(stripped) > 64:
+        return False
+    if "表" not in stripped:
+        return False
+    if "法定代表人" in stripped:
+        return False
+    return bool(re.match(r"^[（(]?[一二三四五六七八九十\d]+[）).、\.]?.{0,48}表$", stripped) or stripped.endswith("表"))
+
+
 def _detect_units(text: str) -> tuple[str | None, str | None]:
     currency = None
     units = None
@@ -414,6 +446,13 @@ def _strip_numbers(line: str) -> str:
     cleaned = NUMBER_RE.sub(" ", line)
     cleaned = re.sub(r"\s{2,}", " ", cleaned)
     return cleaned.strip()
+
+
+def _matches_any_metric_label(label: str) -> bool:
+    for statement_type in ("income", "balance", "cashflow"):
+        if match_metric(label, statement_type):
+            return True
+    return False
 
 
 def _html_cell_text(cell_html: str) -> str:
@@ -532,6 +571,16 @@ def _extract_last_heading(context: str) -> str | None:
     return lines[-1].lstrip("# ").strip() or None
 
 
+def _detect_is_consolidated(text: str | None) -> bool | None:
+    if not text:
+        return None
+    if "合并" in text:
+        return True
+    if "母公司" in text:
+        return False
+    return None
+
+
 def _parse_html_tables(md_text: str, page_number: int) -> list[TableBlock]:
     blocks: list[TableBlock] = []
     for match in HTML_TABLE_RE.finditer(md_text):
@@ -544,7 +593,7 @@ def _parse_html_tables(md_text: str, page_number: int) -> list[TableBlock]:
         statement_type = _detect_statement_type(context)
         title = _extract_last_heading(context_before)
         currency, units = _detect_units(context)
-        is_consolidated = "合并" in context if context else None
+        is_consolidated = _detect_is_consolidated(context)
 
         row_htmls = HTML_ROW_RE.findall(table_html)
         if not row_htmls:
@@ -667,16 +716,14 @@ def _guess_column_labels(header_lines: list[str], num_cols: int) -> list[TableCo
         except ValueError:
             labels = []
 
-    if not labels:
+    if not labels and num_cols == 2:
+        labels = ["current_period", "prior_period"]
+    elif not labels:
         labels = [f"col_{i + 1}" for i in range(num_cols)]
 
     for label in labels:
-        fiscal_year = None
-        period_end = None
-        if label.isdigit() and len(label) == 4:
-            fiscal_year = int(label)
-        if date_match:
-            period_end = date_match
+        fiscal_year = _extract_fiscal_year(label)
+        period_end = date(fiscal_year, 12, 31) if fiscal_year is not None else date_match
         columns.append(TableColumn(label=label, fiscal_year=fiscal_year, period_end=period_end))
 
     return columns
@@ -773,7 +820,7 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
         currency, units = _detect_units(header_text)
         title = current_header[0] if current_header else None
         section_title = current_header[-1] if current_header else None
-        is_consolidated = "合并" in header_text if header_text else None
+        is_consolidated = _detect_is_consolidated(header_text)
 
         if not statement_type:
             statement_type = infer_statement_type_from_rows(table_rows)
@@ -798,23 +845,49 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
         current_page_start = None
         current_page_end = None
 
+    non_row_streak = 0
     for page in pages:
         lines = [line.strip() for line in page.text_raw.splitlines()]
         for line in lines:
             if not line:
                 if current_rows:
-                    flush_current()
+                    non_row_streak += 1
+                    if non_row_streak >= 8:
+                        flush_current()
+                        non_row_streak = 0
                 continue
 
-            if _detect_statement_type(line):
+            statement_line = _detect_statement_type(line)
+            if statement_line:
                 last_statement_header = (page.page, line)
+                if current_rows:
+                    flush_current()
+                    non_row_streak = 0
+                header_buffer.append((page.page, line))
+                if len(header_buffer) > 3:
+                    header_buffer.pop(0)
+                continue
+
+            if current_rows and _looks_like_table_title(line):
+                flush_current()
+                non_row_streak = 0
+                header_buffer.append((page.page, line))
+                if len(header_buffer) > 3:
+                    header_buffer.pop(0)
+                continue
 
             cells = _extract_numbers(line)
-            has_label = bool(_strip_numbers(line))
+            label_text = _strip_numbers(line)
+            has_label = bool(label_text)
             if not current_rows:
                 is_row = len(cells) >= 2 and has_label
             else:
-                is_row = len(cells) >= 1 and has_label
+                if len(cells) >= 2 and has_label:
+                    is_row = True
+                elif len(cells) == 1 and has_label:
+                    is_row = _matches_any_metric_label(label_text)
+                else:
+                    is_row = False
             if is_row:
                 if not current_rows:
                     current_header = [text for _, text in header_buffer]
@@ -825,9 +898,15 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
                     current_page_start = page.page
                 current_rows.append((page.page, line))
                 current_page_end = page.page
+                non_row_streak = 0
             else:
                 if current_rows:
-                    flush_current()
+                    # Keep short non-row stretches inside the same statement table;
+                    # many reports interleave descriptive lines between numeric rows.
+                    non_row_streak += 1
+                    if non_row_streak >= 8:
+                        flush_current()
+                        non_row_streak = 0
                 header_buffer.append((page.page, line))
                 if len(header_buffer) > 3:
                     header_buffer.pop(0)
@@ -837,6 +916,36 @@ def _detect_table_blocks(pages: list[PageContent]) -> list[TableBlock]:
 
     return blocks
 
+
+
+
+def _detect_report_type_from_line(line: str) -> str | None:
+    lowered = line.lower()
+    if "年度报告" in line or "年报" in line or "annual report" in lowered:
+        return "annual"
+    if "第一季度" in line or "一季度" in line:
+        return "q1"
+    if "第二季度" in line or "二季度" in line:
+        return "q2"
+    if "第三季度" in line or "三季度" in line:
+        return "q3"
+    if "半年度" in line or "中期报告" in line:
+        return "semiannual"
+    return None
+
+
+def _default_period_end(report_type: str | None, fiscal_year: int | None) -> date | None:
+    if not fiscal_year:
+        return None
+    if report_type == "annual":
+        return date(fiscal_year, 12, 31)
+    if report_type in {"q1"}:
+        return date(fiscal_year, 3, 31)
+    if report_type in {"q2", "semiannual"}:
+        return date(fiscal_year, 6, 30)
+    if report_type == "q3":
+        return date(fiscal_year, 9, 30)
+    return None
 
 def _extract_metadata(pages: list[PageContent]) -> ReportMeta:
     head_text = "\n".join(page.text_raw for page in pages[:3])
@@ -850,14 +959,15 @@ def _extract_metadata(pages: list[PageContent]) -> ReportMeta:
     currency, units = _detect_units(head_text)
 
     for line in head_text.splitlines():
-        if not report_title and ("年度报告" in line or "年报" in line or "annual report" in line.lower()):
+        detected_type = _detect_report_type_from_line(line)
+        if not report_title and detected_type:
             report_title = line.strip()
         if not company_name and "公司名称" in line:
             company_name = line.split("：", 1)[-1].strip()
         if not ticker and ("股票代码" in line or "证券代码" in line):
             ticker = line.split("：", 1)[-1].strip()
-        if not report_type and ("年度报告" in line or "年报" in line):
-            report_type = "annual"
+        if not report_type and detected_type:
+            report_type = detected_type
 
     years = YEAR_RE.findall(head_text)
     if years:
@@ -869,8 +979,8 @@ def _extract_metadata(pages: list[PageContent]) -> ReportMeta:
     date_match = _parse_date_from_text(head_text)
     if date_match:
         period_end = date_match
-    elif fiscal_year and report_type == "annual":
-        period_end = date(fiscal_year, 12, 31)
+    else:
+        period_end = _default_period_end(report_type, fiscal_year)
 
     extra = {"raw_head": head_text[:2000]}
     return ReportMeta(

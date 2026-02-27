@@ -78,3 +78,16 @@ AG-UI protocol streaming endpoint (used by CopilotKit frontend).
 - PDF/DOCX only (no OCR)
 - BGE‑M3 is loaded in the embedding service (CPU)
 - Milvus stores vectors; Postgres stores metadata + sessions
+
+## PDF2DB Ground Truth Eval
+
+Use GT rows to evaluate extraction quality:
+
+```bash
+.venv/bin/python scripts/eval_pdf2db_gt.py \
+  --gt data/ground_truth/financial_gt_template.csv \
+  --output tmp/gt_eval_summary.json \
+  --details-output tmp/gt_eval_details.csv
+```
+
+GT template columns are in `data/ground_truth/financial_gt_template.csv`.

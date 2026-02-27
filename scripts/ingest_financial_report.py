@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import json
 from pathlib import Path
 
@@ -64,7 +64,9 @@ STATEMENT_TYPE_MAP = {
     "cashflow": "cashflow",
 }
 CORE_STATEMENT_TYPES = {"balance_sheet", "income_statement", "cash_flow"}
-CORE_STATEMENT_TITLE_RE = re.compile(r"(资产负债表|利润表|损益表|现金流量表)")
+CORE_STATEMENT_TITLE_RE = re.compile(r"(资产负债表(?!日)|利润表|损益表|现金流量表)")
+NON_CORE_TABLE_HINT_RE = re.compile(r"(附注|项目附注|资产负债表日)")
+CORE_TABLE_IDENTITY_RE = re.compile(r"(合并及公司|合并资产负债表|合并利润表|合并现金流量表)")
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -76,6 +78,7 @@ def _env_bool(name: str, default: bool) -> bool:
 
 CORE_STATEMENTS_ONLY = _env_bool("INGEST_CORE_STATEMENTS_ONLY", True)
 MIN_METRIC_ROWS_PER_TABLE = int(os.getenv("MIN_METRIC_ROWS_PER_TABLE", "2"))
+ALLOW_RAW_METRICS = _env_bool("INGEST_ALLOW_RAW_METRICS", False)
 ALL_STATEMENT_TYPES = ("income", "balance", "cashflow")
 LOW_QUALITY_UNMATCHED_LABELS = {
     "其他",
@@ -87,6 +90,11 @@ LOW_QUALITY_UNMATCHED_LABELS = {
     "影响",
     "费用税金",
 }
+
+MIXED_SCOPE_TABLE_RE = re.compile(r"(合并及公司|合并和公司|合并及母公司|母公司|合并\s+合并\s+公司|合并\s+公司\s+公司|公司\s+公司)")
+
+
+GENERIC_COLUMN_LABEL_RE = re.compile(r"^col_\d+$", re.IGNORECASE)
 
 
 def _match_metric(label: str, statement_type: str) -> dict | None:
@@ -221,20 +229,105 @@ def _load_existing_table_row_map(cur, report_id: int) -> tuple[list[int], dict[i
     return table_ids, row_map
 
 
+def _normalize_report_type(report_type: str | None) -> str | None:
+    if not report_type:
+        return None
+    normalized = report_type.strip().lower()
+    if normalized in {"annual", "yearly", "年报"}:
+        return "annual"
+    if normalized in {"q1", "first_quarter", "第一季度"}:
+        return "q1"
+    if normalized in {"q2", "second_quarter", "第二季度", "quarter2"}:
+        return "q2"
+    if normalized in {"q3", "third_quarter", "第三季度"}:
+        return "q3"
+    if normalized in {"semiannual", "half_year", "interim", "中报", "半年度"}:
+        return "semiannual"
+    if normalized in {"quarterly", "季报"}:
+        return "quarterly"
+    return normalized
+
+
+def _column_period_role(label: str | None) -> str | None:
+    if not label:
+        return None
+    raw = label.strip()
+    lowered = raw.lower()
+
+    if lowered == "current_period":
+        return "current"
+    if lowered == "prior_period":
+        return "prior"
+
+    if any(token in lowered for token in ("current", "this_period")):
+        return "current"
+    if any(token in lowered for token in ("prior", "previous", "last_period")):
+        return "prior"
+
+    if any(token in raw for token in ("本期", "本年", "当期", "本季度", "期末", "本报告期")):
+        return "current"
+    if any(token in raw for token in ("上期", "上年", "上年同期", "上季度", "期初", "上报告期")):
+        return "prior"
+
+    return None
+
+
+def _quarter_start(day: date) -> date:
+    month = ((day.month - 1) // 3) * 3 + 1
+    return date(day.year, month, 1)
+
+
+def _prior_period_end(report_type: str | None, period_end: date) -> date:
+    normalized = _normalize_report_type(report_type)
+    if normalized in {"q1", "q2", "q3", "quarterly"}:
+        return _quarter_start(period_end) - timedelta(days=1)
+    return date(period_end.year - 1, period_end.month, period_end.day)
+
+
 def _infer_period_end(col, meta) -> date | None:
+    role = _column_period_role(col.label)
+
+    if role == "current" and meta.period_end:
+        return meta.period_end
+
+    if role == "prior":
+        if meta.period_end:
+            return _prior_period_end(meta.report_type, meta.period_end)
+        if col.period_end:
+            return _prior_period_end(meta.report_type, col.period_end)
+
     if col.period_end:
         return col.period_end
-    if col.label == "current_period" and meta.period_end:
-        return meta.period_end
-    if col.label == "prior_period" and meta.period_end:
-        return date(meta.period_end.year - 1, meta.period_end.month, meta.period_end.day)
     if col.fiscal_year:
         return date(col.fiscal_year, 12, 31)
     return meta.period_end
 
 
-def _infer_period_start(report_type: str | None, period_end: date | None) -> date | None:
-    if report_type == "annual" and period_end:
+def _infer_period_start(report_type: str | None, period_end: date | None, col_label: str | None = None) -> date | None:
+    if not period_end:
+        return None
+    normalized = _normalize_report_type(report_type)
+    if normalized in {"annual", "semiannual"}:
+        return date(period_end.year, 1, 1)
+    if normalized in {"q1", "q2", "q3", "quarterly"}:
+        return _quarter_start(period_end)
+
+    label = (col_label or "").strip()
+    role = _column_period_role(label)
+    if role in {"current", "prior"}:
+        if period_end.month == 12 and period_end.day == 31:
+            return date(period_end.year, 1, 1)
+        if period_end.month in {3, 6, 9, 12}:
+            return _quarter_start(period_end)
+
+    if "年度" in label or re.search(r"20\d{2}\s*年", label):
+        return date(period_end.year, 1, 1)
+
+    lowered = label.lower()
+    if any(token in lowered for token in ("q1", "q2", "q3", "q4")) or "季度" in label:
+        return _quarter_start(period_end)
+
+    if period_end.month == 12 and period_end.day == 31:
         return date(period_end.year, 1, 1)
     return None
 
@@ -245,6 +338,168 @@ def _consolidation_scope(is_consolidated: bool | None) -> str | None:
     if is_consolidated is False:
         return "parent"
     return None
+
+
+def _scope_from_text(text: str | None) -> str | None:
+    if not text:
+        return None
+    raw = text.strip()
+    if not raw:
+        return None
+    if "合并" in raw or "本集团" in raw:
+        return "consolidated"
+    if "母公司" in raw or "本公司" in raw:
+        return "parent"
+    if len(raw) <= 24 and "公司" in raw and "合并" not in raw:
+        return "parent"
+    return None
+
+
+def _table_has_mixed_scopes(table) -> bool:
+    text = f"{table.title or ''} {table.section_title or ''}"
+    return bool(MIXED_SCOPE_TABLE_RE.search(text))
+
+
+def _column_bucket_key(col, index: int) -> str:
+    if col.period_end:
+        return f"e:{col.period_end.isoformat()}"
+    if col.fiscal_year:
+        return f"y:{col.fiscal_year}"
+    role = _column_period_role(col.label)
+    if role:
+        return f"r:{role}"
+    if col.label:
+        match = re.search(r"(20\d{2})", col.label)
+        if match:
+            return f"y:{match.group(1)}"
+    return f"i:{index}"
+
+
+def _infer_column_scopes(table) -> list[str | None]:
+    columns = list(table.columns or [])
+    if not columns:
+        return []
+
+    scopes: list[str | None] = [_scope_from_text(col.label) for col in columns]
+    fallback_scope = _consolidation_scope(table.is_consolidated)
+    if fallback_scope is None:
+        fallback_scope = _scope_from_text(f"{table.title or ''} {table.section_title or ''}")
+
+    if not _table_has_mixed_scopes(table):
+        return [scope or fallback_scope for scope in scopes]
+
+    buckets: dict[str, list[int]] = {}
+    for idx, col in enumerate(columns):
+        buckets.setdefault(_column_bucket_key(col, idx), []).append(idx)
+
+    for indexes in buckets.values():
+        known = {scopes[i] for i in indexes if scopes[i]}
+        pending = [i for i in indexes if scopes[i] is None]
+        if not pending:
+            continue
+
+        if len(known) == 1:
+            known_scope = next(iter(known))
+            opposite_scope = "parent" if known_scope == "consolidated" else "consolidated"
+            for idx in pending:
+                scopes[idx] = opposite_scope
+            continue
+
+        if len(pending) >= 2:
+            if len(pending) == 2:
+                scopes[pending[0]] = "consolidated"
+                scopes[pending[1]] = "parent"
+            elif len(pending) == 3:
+                scopes[pending[0]] = "consolidated"
+                scopes[pending[1]] = "consolidated"
+                scopes[pending[2]] = "parent"
+            else:
+                split = (len(pending) + 1) // 2
+                for pos, idx in enumerate(pending):
+                    scopes[idx] = "consolidated" if pos < split else "parent"
+            continue
+
+        scopes[pending[0]] = fallback_scope or "consolidated"
+
+    unresolved = [idx for idx, scope in enumerate(scopes) if scope is None]
+    if unresolved:
+        if len(columns) >= 4 and len(unresolved) > 1:
+            split = len(columns) // 2
+            for idx in unresolved:
+                scopes[idx] = "consolidated" if idx < split else "parent"
+        else:
+            for idx in unresolved:
+                scopes[idx] = fallback_scope
+
+    return scopes
+
+
+def _infer_period_end_for_cell(table, col, col_idx: int, meta, statement_type: str) -> date | None:
+    period_end = _infer_period_end(col, meta)
+    if statement_type != "balance":
+        return period_end
+
+    label = (col.label or "").strip()
+    if not GENERIC_COLUMN_LABEL_RE.fullmatch(label):
+        return period_end
+
+    if not meta.period_end:
+        return period_end
+
+    # For balance sheets with generic col_* headers, pypdf often loses
+    # current/prior year headers. Reconstruct by alternating current/prior.
+    columns = list(table.columns or [])
+    if len(columns) < 2:
+        return period_end
+    known_years = {c.period_end.year for c in columns if c.period_end}
+    if len(known_years) >= 2:
+        return period_end
+
+    prior_end = _prior_period_end(meta.report_type, meta.period_end)
+    return meta.period_end if col_idx % 2 == 0 else prior_end
+
+
+def _should_skip_duplicate_mixed_scope_cell(
+    mixed_scope: bool,
+    seen_keys: set[tuple[str | None, str | None]],
+    period_end: date | None,
+    scope: str | None,
+) -> bool:
+    if not mixed_scope:
+        return False
+    key = (period_end.isoformat() if period_end else None, scope)
+    if key in seen_keys:
+        return True
+    seen_keys.add(key)
+    return False
+
+
+def _unit_scale(unit: str | None) -> tuple[str | None, int]:
+    if not unit:
+        return None, 1
+
+    raw = unit.strip().lower()
+    if raw in {"1", "元"}:
+        return "1", 1
+    if raw in {"1k", "k", "千元", "千"} or "千元" in raw:
+        return "1", 1
+    if raw in {"10k", "w", "万元", "万"} or "万元" in raw:
+        return "1", 1
+    if raw in {"100m", "亿元", "亿"} or "亿元" in raw:
+        return "1", 1
+    if "%" in raw:
+        return "%", 1
+    return unit, 1
+
+
+def _normalize_unit_and_value(unit: str | None, value):
+    normalized_unit, scale = _unit_scale(unit)
+    if value is None or scale == 1:
+        return normalized_unit, value
+    try:
+        return normalized_unit, value * scale
+    except TypeError:
+        return normalized_unit, value
 
 
 def _mineru_output_summary(parse_method: str, source_path: Path) -> dict:
@@ -277,10 +532,13 @@ def _mineru_output_summary(parse_method: str, source_path: Path) -> dict:
 
 
 def _is_core_statement_table(table) -> bool:
+    title_text = f"{table.title or ''} {table.section_title or ''}"
+    if NON_CORE_TABLE_HINT_RE.search(title_text) and not CORE_TABLE_IDENTITY_RE.search(title_text):
+        return False
+
     statement_type = (table.statement_type or "").strip()
     if statement_type in CORE_STATEMENT_TYPES:
         return True
-    title_text = f"{table.title or ''} {table.section_title or ''}"
     return bool(CORE_STATEMENT_TITLE_RE.search(title_text))
 
 
@@ -315,7 +573,9 @@ def _insert_facts_for_table(
     stock_fact_count = 0
     table_currency = table.currency or meta.currency
     table_units = table.units or meta.units
-    consolidation_scope = _consolidation_scope(table.is_consolidated)
+    normalized_table_unit, _ = _unit_scale(table_units)
+    table_scope = _consolidation_scope(table.is_consolidated)
+    column_scopes = _infer_column_scopes(table)
 
     for row_idx, row in enumerate(table.rows):
         label = row.label or ""
@@ -328,23 +588,38 @@ def _insert_facts_for_table(
         if "公司" in label and len(label) > 30:
             continue
         metric_def, metric_statement = _match_metric_with_fallback(row.label, mapped_statement)
-        if metric_def is None and _is_low_quality_unmatched_label(row.label):
-            continue
+        if metric_def is None:
+            if not ALLOW_RAW_METRICS:
+                continue
+            if _is_low_quality_unmatched_label(row.label):
+                continue
         metric_id = _get_or_create_metric(
             cur,
             metric_def,
             row.label,
             metric_statement,
-            table_units,
+            normalized_table_unit,
             now,
             metric_cache,
         )
         row_id = row_ids[row_idx] if row_ids else None
-        for col, cell in zip(table.columns, row.cells):
+        row_scope_period_seen: set[tuple[str | None, str | None]] = set()
+        mixed_scope_table = _table_has_mixed_scopes(table)
+        for col_idx, (col, cell) in enumerate(zip(table.columns, row.cells)):
             if cell.value is None:
                 continue
-            period_end = _infer_period_end(col, meta)
-            period_start = _infer_period_start(meta.report_type, period_end)
+            period_end = _infer_period_end_for_cell(table, col, col_idx, meta, metric_statement)
+            period_start = _infer_period_start(meta.report_type, period_end, col.label)
+            normalized_unit, normalized_value = _normalize_unit_and_value(table_units, cell.value)
+            col_scope = column_scopes[col_idx] if col_idx < len(column_scopes) else None
+            consolidation_scope = col_scope or table_scope
+            if _should_skip_duplicate_mixed_scope_cell(
+                mixed_scope_table,
+                row_scope_period_seen,
+                period_end,
+                consolidation_scope,
+            ):
+                continue
 
             cur.execute(
                 """
@@ -385,8 +660,8 @@ def _insert_facts_for_table(
                         version_id,
                         metric_id,
                         period_end,
-                        cell.value,
-                        table_units,
+                        normalized_value,
+                        normalized_unit,
                         table_currency,
                         consolidation_scope,
                         trace_id,
@@ -409,8 +684,8 @@ def _insert_facts_for_table(
                             report_id,
                             metric_id,
                             period_end,
-                            cell.value,
-                            table_units,
+                            normalized_value,
+                            normalized_unit,
                             table_currency,
                             consolidation_scope,
                             trace_id,
@@ -438,8 +713,8 @@ def _insert_facts_for_table(
                         metric_id,
                         period_start,
                         period_end,
-                        cell.value,
-                        table_units,
+                        normalized_value,
+                        normalized_unit,
                         table_currency,
                         consolidation_scope,
                         None,
@@ -464,8 +739,8 @@ def _insert_facts_for_table(
                             metric_id,
                             period_start,
                             period_end,
-                            cell.value,
-                            table_units,
+                            normalized_value,
+                            normalized_unit,
                             table_currency,
                             consolidation_scope,
                             None,
@@ -805,7 +1080,7 @@ def insert_report(
                         announce_date, source_url, version_no, is_restated,
                         created_at, updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING report_id
                     """,
                     (
