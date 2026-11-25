@@ -75,7 +75,7 @@ def test_third_model_round_can_only_answer():
     offered_tools = []
 
     def complete(messages, **kwargs):
-        offered_tools.append("tools" in kwargs)
+        offered_tools.append(kwargs.get("tool_choice"))
         if len(offered_tools) == 3:
             assert messages[-1]["role"] == "tool"
             assert json.loads(messages[-1]["content"])["page"] == 5
@@ -88,5 +88,5 @@ def test_third_model_round_can_only_answer():
 
     trace = StringIO()
     assert ask("营收在哪一页？", MarkdownTools([(5, "营收")], None), complete, trace=trace) == "营收见第 5 页。"
-    assert offered_tools == [True, True, False]
+    assert offered_tools == [None, None, "none"]
     assert json.loads(trace.getvalue().splitlines()[-1])["turn"] == 3
