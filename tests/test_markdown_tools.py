@@ -69,3 +69,24 @@ def test_locate_links_continuation_and_matches_terms_in_one_header():
     headers = tools.locate(["公司名称", "净利润"], "table_header", "all")
     assert [tools.read(hit["passage"])["page"] for hit in headers["matches"]] == [2]
     assert tools.locate(["公司名称", "净利润"], "text", "all")["hits"] == 2
+
+
+def test_third_model_round_can_only_answer():
+    offered_tools = []
+
+    def complete(messages, **kwargs):
+        offered_tools.append("tools" in kwargs)
+        if len(offered_tools) == 3:
+            assert messages[-1]["role"] == "tool"
+            assert json.loads(messages[-1]["content"])["page"] == 5
+            msg = SimpleNamespace(tool_calls=[], content="营收见第 5 页。")
+        else:
+            function = SimpleNamespace(name="read", arguments='{"passage":0}')
+            call = SimpleNamespace(id=str(len(offered_tools)), function=function)
+            msg = SimpleNamespace(tool_calls=[call], model_dump=lambda **_: {"role": "assistant"})
+        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+    trace = StringIO()
+    assert ask("营收在哪一页？", MarkdownTools([(5, "营收")], None), complete, trace=trace) == "营收见第 5 页。"
+    assert offered_tools == [True, True, False]
+    assert json.loads(trace.getvalue().splitlines()[-1])["turn"] == 3
