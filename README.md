@@ -91,3 +91,25 @@ Use GT rows to evaluate extraction quality:
 ```
 
 GT template columns are in `data/ground_truth/financial_gt_template.csv`.
+
+### Markdown report retrieval
+
+The Markdown CLI offers literal phrase lookup by page, heading, or table header,
+with `any` and `all` matching. Recognized continuation headings link back to
+an earlier matching heading. Search and evidence tools return PDF page numbers
+when the input is a page-preserving PDF conversion.
+
+With the configured Milvus and embedding service running, build the index once
+and use it for subsequent questions:
+
+```bash
+uv run --no-sync python -m scripts.chat_markdown report.pdf --backend milvus --index-only
+uv run --no-sync python -m scripts.chat_markdown report.pdf '主要子公司有哪些？' --backend milvus
+```
+
+The optional Milvus backend stores only Markdown passages and search vectors.
+It uses Jieba BM25, BGE-M3 sparse search, and dense search. Collection names are
+derived from the passage content, embedding model identifier, dimension, and
+index schema version. A model weight change under the same identifier requires
+a new model identifier or index schema version. The first build embeds all
+passages. Use the default local backend for ad hoc use without Milvus.

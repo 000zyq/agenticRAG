@@ -54,3 +54,18 @@ def test_tool_loop_runs_searches_concurrently_and_fuses_afterward():
     assert document_encodes == [["profit"]]
     results = [json.loads(line) for line in trace.getvalue().splitlines()]
     assert {event["id"] for event in results if event["event"] == "tool_result"} == {"d", "s", "f"}
+
+
+def test_locate_links_continuation_and_matches_terms_in_one_header():
+    tools = MarkdownTools([
+        (1, "## 主要子公司的构成\n| 公司名称 | 注册地 |\n| --- | --- |"),
+        (2, "(a) 主要子公司的构成（续）\n<table><tr><td>公司名称</td><td>净利润</td></tr>"
+            "<tr><td>样本公司</td><td>10</td></tr></table>"),
+        (3, "# 公司名称\n<table><tr><td>指标</td></tr><tr><td>净利润</td></tr></table>"),
+    ], None)
+    headings = tools.locate(["主要子公司的构成", "未披露"], "heading", "any")["matches"]
+    assert [hit["page"] for hit in headings] == [1, 2]
+    assert headings[1]["continuation_of"]["page"] == 1
+    headers = tools.locate(["公司名称", "净利润"], "table_header", "all")
+    assert [tools.read(hit["passage"])["page"] for hit in headers["matches"]] == [2]
+    assert tools.locate(["公司名称", "净利润"], "text", "all")["hits"] == 2
