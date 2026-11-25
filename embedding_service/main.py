@@ -28,21 +28,21 @@ class EmbeddingModel:
     def encode(self, texts: list[str], mode: str = "dense") -> dict:
         output = self.model.encode(
             texts,
-            return_dense=mode in ("dense", "all"),
-            return_sparse=mode in ("sparse", "all"),
+            return_dense=mode in ("dense", "dense_sparse", "all"),
+            return_sparse=mode in ("sparse", "dense_sparse", "all"),
             return_colbert_vecs=mode in ("colbert", "all"),
         )
 
         result: dict = {}
 
-        if mode in ("dense", "all"):
+        if mode in ("dense", "dense_sparse", "all"):
             dense = []
             for v in output["dense_vecs"]:
                 v = v.astype(np.float32)
                 dense.append(v.tolist())
             result["dense"] = dense
 
-        if mode in ("sparse", "all"):
+        if mode in ("sparse", "dense_sparse", "all"):
             lexical = output.get("lexical_weights") or []
             sparse = []
 

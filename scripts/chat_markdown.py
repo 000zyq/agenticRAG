@@ -1,11 +1,13 @@
 """Query one local report with an LLM-directed Markdown retrieval loop."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from collections import Counter
 import json
 import math
 from pathlib import Path
 import re
+from threading import Lock
 from time import perf_counter
 
 
@@ -37,6 +39,8 @@ class MarkdownTools:
         self.embed = embed
         self.vectors = {}
         self.lists = {}
+        self.vector_lock = Lock()
+        self.list_lock = Lock()
         self.counts = [Counter(tokens(md)) for _, md in self.passages]
         self.df = Counter(t for counts in self.counts for t in counts)
         self.avg = sum(c.total() for c in self.counts) / len(self.counts) or 1
@@ -50,8 +54,12 @@ class MarkdownTools:
         else:
             if mode not in {"dense", "sparse"}:
                 raise ValueError("Unknown search mode")
-            if mode not in self.vectors:
-                self.vectors[mode] = self.embed([md for _, md in self.passages], mode)
+            with self.vector_lock:
+                if not self.vectors:
+                    vectors = self.embed([md for _, md in self.passages], "dense_sparse")
+                    if any(len(vectors.get(kind, [])) != len(self.passages) for kind in ("dense", "sparse")):
+                        raise RuntimeError("Embedding service did not return both document vector sets")
+                    self.vectors = vectors
             q, = self.embed([query], mode)
             if mode == "sparse":
                 weights = dict(zip(q["indices"], q["values"]))
@@ -63,8 +71,9 @@ class MarkdownTools:
         return self.store([i for i in ranked if mode == "dense" or scores[i] > 0][:100])
 
     def store(self, ids):
-        handle = str(len(self.lists)+1)
-        self.lists[handle] = ids
+        with self.list_lock:
+            handle = str(len(self.lists)+1)
+            self.lists[handle] = ids
         return {"list": handle, "hits": len(ids), "preview": [
             {"passage": i, "page": self.passages[i][0], "text": self.passages[i][1][:200]} for i in ids[:5]]}
 
@@ -83,9 +92,12 @@ class MarkdownTools:
 
 
 def ask(question, corpus, complete, *, trace=None):
+    trace_lock = Lock()
+
     def record(event, **fields):
         if trace is not None:
-            print(json.dumps({"event": event, **fields}, ensure_ascii=False), file=trace, flush=True)
+            with trace_lock:
+                print(json.dumps({"event": event, **fields}, ensure_ascii=False), file=trace, flush=True)
 
     record("start", question=question)
     messages = [{"role": "system", "content": (
@@ -109,7 +121,7 @@ def ask(question, corpus, complete, *, trace=None):
             record("answer", turn=turn, answer=msg.content)
             return msg.content
         messages.append(msg.model_dump(exclude_none=True))
-        for call in msg.tool_calls:
+        def execute(call):
             started = perf_counter()
             record("tool_call", turn=turn, id=call.id, tool=call.function.name,
                    arguments=call.function.arguments)
@@ -119,8 +131,19 @@ def ask(question, corpus, complete, *, trace=None):
                 result = {"error": str(exc)}
             record("tool_result", turn=turn, id=call.id,
                    duration_ms=round((perf_counter() - started) * 1000), result=result)
-            messages.append({"role": "tool", "tool_call_id": call.id,
-                             "content": json.dumps(result, ensure_ascii=False)})
+            return {"role": "tool", "tool_call_id": call.id,
+                    "content": json.dumps(result, ensure_ascii=False)}
+
+        pending = []
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for call in msg.tool_calls:
+                if call.function.name == "fuse":
+                    messages.extend(future.result() for future in pending)
+                    pending.clear()
+                    messages.append(execute(call))
+                else:
+                    pending.append(pool.submit(execute, call))
+            messages.extend(future.result() for future in pending)
     record("step_limit", turns=12)
     raise RuntimeError("Retrieval step limit reached")
 
@@ -144,15 +167,18 @@ def main():
         docs = [(None, args.source.read_text(encoding="utf-8"))]
 
     def embed(texts, mode):
-        vectors = []
+        kinds = ("dense", "sparse") if mode == "dense_sparse" else (mode,)
+        vectors = {kind: [] for kind in kinds}
         for i in range(0, len(texts), 16):
             try:
                 r = httpx.post(settings.embedding_url, json={"texts": texts[i:i+16], "mode": mode}, timeout=120)
                 r.raise_for_status()
             except httpx.HTTPError as exc:
                 raise RuntimeError("Embedding service unavailable") from exc
-            vectors.extend(r.json()["result"][mode])
-        return vectors
+            result = r.json()["result"]
+            for kind in kinds:
+                vectors[kind].extend(result.get(kind, []))
+        return vectors if mode == "dense_sparse" else vectors[mode]
 
     client = OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
     from functools import partial
