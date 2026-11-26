@@ -20,7 +20,8 @@ jobs:
       - name: Install test and collection dependencies
         run: |
           uv venv --python 3.11
-          uv pip install pytest pypdf ruff fastapi httpx python-dotenv 'psycopg[binary]' openai python-docx pymilvus
+          uv pip install --python .venv/bin/python pytest pypdf ruff fastapi httpx python-dotenv \
+            'psycopg[binary]' openai python-docx pymilvus tiktoken
       - name: Run lint
         run: uv run --no-sync python -m ruff check .
       - name: Run tests (non-integration)
