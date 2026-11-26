@@ -114,7 +114,7 @@ class MarkdownTools:
         return self.structure.locate(phrases, scope, match)
 
 
-def ask(question, corpus, complete, *, trace=None):
+def ask(question, corpus, complete, *, trace=None, toolset=None):
     trace_lock = Lock()
 
     def record(event, **fields):
@@ -148,11 +148,17 @@ def ask(question, corpus, complete, *, trace=None):
         "and fill specific evidence gaps, including continuation pages. In the last tool round, "
         "use grep or read to obtain actual values, because search previews can omit them."
     )
+    if toolset is None:
+        tools = TOOLS
+        dispatch = {name: getattr(corpus, name) for name in ("search", "fuse", "read", "locate")}
+        dispatch["grep"] = corpus.structure.grep
+    else:
+        tools, dispatch, guidance = toolset
+        retrieval_rules = (
+            f"You have at most {MAX_MODEL_ROUNDS - 1} tool rounds, then one answer-only round. " + guidance
+        )
     messages = [{"role": "system", "content": f"{answer_rules}\n{retrieval_rules}"},
         {"role": "user", "content": question}]
-    dispatch = {"search": corpus.search, "fuse": corpus.fuse, "read": corpus.read}
-    dispatch["locate"] = corpus.locate
-    dispatch["grep"] = corpus.structure.grep
     for turn in range(1, MAX_MODEL_ROUNDS + 1):
         started = perf_counter()
         try:
@@ -164,7 +170,7 @@ def ask(question, corpus, complete, *, trace=None):
                         {"question": question, "retrieved_evidence": evidence}, ensure_ascii=False)},
                 ])
             else:
-                response = complete(messages=messages, tools=TOOLS)
+                response = complete(messages=messages, tools=tools)
         except Exception as exc:
             record("model_error", turn=turn, error_type=type(exc).__name__)
             raise

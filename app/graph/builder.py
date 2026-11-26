@@ -22,11 +22,11 @@ from app.graph.repository import (
 EXTRACTOR_VERSION = "generic_doc_kg_v1"
 
 
-def build_document_graph(doc_id: str) -> dict[str, Any]:
+def build_document_graph(doc_id: str, *, extractor=None, extractor_version: str = EXTRACTOR_VERSION) -> dict[str, Any]:
     started = perf_counter()
     settings = get_settings()
     run = get_latest_graph_build_run(doc_id, statuses=("pending", "running"))
-    run_id = int(run["run_id"]) if run else create_graph_build_run(doc_id, EXTRACTOR_VERSION, status="running")
+    run_id = int(run["run_id"]) if run else create_graph_build_run(doc_id, extractor_version, status="running")
     mark_graph_build_run_running(run_id)
     mark_document_graph_status(doc_id, "running")
 
@@ -43,7 +43,7 @@ def build_document_graph(doc_id: str) -> dict[str, Any]:
         usage_totals: Counter[str] = Counter()
         calls_without_usage = 0
         for chunk in chunks:
-            extracted = extract_chunk_graph(chunk["text"])
+            extracted = (extractor or extract_chunk_graph)(chunk["text"])
             mode = extracted.get("extraction_mode", "unknown")
             extraction_modes[mode] += 1
             usage = extracted.get("usage")
@@ -53,7 +53,7 @@ def build_document_graph(doc_id: str) -> dict[str, Any]:
                 usage_totals["cached_prompt_tokens"] += (
                     (usage.get("prompt_tokens_details") or {}).get("cached_tokens") or 0
                 )
-            elif mode != "unknown":
+            elif mode not in {"unknown", "financial_rules"}:
                 calls_without_usage += 1
             chunk_graphs.append(
                 {
@@ -77,7 +77,7 @@ def build_document_graph(doc_id: str) -> dict[str, Any]:
         )
         summary = {"doc_id": doc_id, "chunks": len(chunks), **counts,
                    "build_seconds": perf_counter() - started,
-                   "extraction_model": settings.graph_extraction_model,
+                   "extraction_model": settings.graph_extraction_model if extractor is None else None,
                    "extraction_modes": dict(extraction_modes),
                    "usage": dict(usage_totals),
                    "calls_without_usage": calls_without_usage}

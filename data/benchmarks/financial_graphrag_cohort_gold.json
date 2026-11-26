@@ -1,0 +1,212 @@
+{
+  "questions": [
+    {
+      "id": "midea-2023-profit",
+      "report": "midea",
+      "category": "direct",
+      "question": "按这份年报的比较数据，2023年度归母净利润是多少？请给出处。",
+      "slots": [
+        {
+          "id": "profit",
+          "any_of": [
+            "(?<!\\d)33719935\\s*千元",
+            "(?<!\\d)337\\.19(?:935|9)?\\s*亿元",
+            "(?<!\\d)337\\.20?\\s*亿元"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*9\\s*页",
+          "\\bp\\.?\\s*9\\b"
+        ]
+      ]
+    },
+    {
+      "id": "muyuan-total-staff",
+      "report": "muyuan",
+      "category": "direct",
+      "question": "2024年末在职员工共多少人？请给出处。",
+      "slots": [
+        {
+          "id": "staff",
+          "any_of": [
+            "(?<!\\d)133642\\s*人"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*67\\s*页",
+          "\\bp\\.?\\s*67\\b"
+        ]
+      ]
+    },
+    {
+      "id": "midea-calc-profit",
+      "report": "midea",
+      "category": "calculation",
+      "question": "用2024年归母净利润除以年末在职员工总数，人均归母净利润多少万元？保留两位小数并引用分子和分母出处。",
+      "slots": [
+        {
+          "id": "ratio",
+          "any_of": [
+            "(?<!\\d)19\\.42\\s*万(?:元)?"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*9\\s*页",
+          "\\bp\\.?\\s*9\\b"
+        ],
+        [
+          "第\\s*82\\s*页",
+          "\\bp\\.?\\s*82\\b"
+        ]
+      ]
+    },
+    {
+      "id": "muyuan-calc-profit",
+      "report": "muyuan",
+      "category": "calculation",
+      "question": "用2024年归母净利润除以年末在职员工总数，人均归母净利润多少万元？保留两位小数并引用分子和分母出处。",
+      "slots": [
+        {
+          "id": "ratio",
+          "any_of": [
+            "(?<!\\d)13\\.38\\s*万(?:元)?"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*9\\s*页",
+          "\\bp\\.?\\s*9\\b"
+        ],
+        [
+          "第\\s*67\\s*页",
+          "\\bp\\.?\\s*67\\b"
+        ]
+      ]
+    },
+    {
+      "id": "midea-ande-place",
+      "report": "midea",
+      "category": "multi_hop",
+      "question": "按主要子公司的构成表，安得智联供应链科技有限公司的注册地是哪座城市？请给出处。",
+      "slots": [
+        {
+          "id": "city",
+          "any_of": [
+            "芜湖"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*266\\s*页",
+          "\\bp\\.?\\s*266\\b"
+        ]
+      ]
+    },
+    {
+      "id": "muyuan-shangcai-place",
+      "report": "muyuan",
+      "category": "multi_hop",
+      "question": "按子公司披露，上蔡牧原农牧有限公司的注册地在哪个省和县？请给出处。",
+      "slots": [
+        {
+          "id": "province",
+          "any_of": [
+            "河南"
+          ]
+        },
+        {
+          "id": "county",
+          "any_of": [
+            "上蔡县"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*224\\s*页",
+          "\\bp\\.?\\s*224\\b"
+        ]
+      ]
+    },
+    {
+      "id": "midea-disclosure-count",
+      "report": "midea",
+      "category": "insufficient_coverage",
+      "question": "是否能仅凭年报的主要子公司构成表确定美的集团在河南注册的全部子公司准确数量？请给出处。",
+      "slots": [
+        {
+          "id": "insufficient",
+          "any_of": [
+            "无法(?:准确)?确定",
+            "不能确定",
+            "不(?:能|足以)(?:据此)?(?:确定|确认|统计|得出)",
+            "无法(?:确认|统计|答复)"
+          ]
+        },
+        {
+          "id": "scope",
+          "any_of": [
+            "主要子公司",
+            "披露范围"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*265\\s*(?:页|[-–、~至])",
+          "\\bp\\.?\\s*265\\b",
+          "第\\s*266\\s*页",
+          "\\bp\\.?\\s*266\\b"
+        ]
+      ],
+      "forbid": [
+        "(?:河南(?:省)?境内|河南(?:省)?注册的)(?:子公司)?(?:总数(?:为|是)?|共有)\\s*[01零一]\\s*家"
+      ]
+    },
+    {
+      "id": "muyuan-rd-combo",
+      "report": "muyuan",
+      "category": "cross_page",
+      "question": "2024年度研发人员有多少，研发投入有多少，研发人员占比是多少？请给出处。",
+      "slots": [
+        {
+          "id": "staff",
+          "any_of": [
+            "(?<!\\d)6486\\s*人"
+          ]
+        },
+        {
+          "id": "investment",
+          "any_of": [
+            "(?<!\\d)1747217657\\.28\\s*元",
+            "(?<!\\d)17\\.47(?:2[0-9]+)?\\s*亿"
+          ]
+        },
+        {
+          "id": "share",
+          "any_of": [
+            "(?<!\\d)4\\.85\\s*%"
+          ]
+        }
+      ],
+      "evidence": [
+        [
+          "第\\s*28\\s*页",
+          "\\bp\\.?\\s*28\\b"
+        ],
+        [
+          "第\\s*29\\s*页",
+          "\\bp\\.?\\s*29\\b"
+        ]
+      ]
+    }
+  ]
+}

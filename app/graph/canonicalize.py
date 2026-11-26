@@ -33,6 +33,9 @@ def _span_for_mention(text: str, mention: str) -> tuple[int | None, int | None]:
 
 def _predicate_family(predicate: str) -> str | None:
     norm = predicate.lower()
+    if norm in {"has_reported_subsidiary", "registered_in", "operates_in", "has_financial_fact",
+                "has_subsidiary_candidate"}:
+        return norm
     if any(token in norm for token in ("acquire", "收购", "并购")):
         return "acquisition"
     if any(token in norm for token in ("use", "采用", "使用", "依赖")):
@@ -209,7 +212,7 @@ def canonicalize_chunk_graphs(
                     "evidence": [
                         {
                             "chunk_order": chunk_order,
-                            "evidence_text": chunk_text[:280],
+                            "evidence_text": str(relation.get("evidence_text") or chunk_text[:280]),
                             "confidence": float(relation.get("confidence", 0.0) or 0.0),
                         }
                     ],
