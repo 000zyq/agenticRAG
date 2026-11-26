@@ -1,6 +1,6 @@
 """Query typed financial observations without scanning report text."""
 from collections import defaultdict
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from app.graph.financial import MAJOR_SUBSIDIARY_SCOPE, METRICS, SUBSIDIARY_MEMBERSHIP, SUBSIDIARY_SCOPE
 from app.graph.query import _load_evidence_map
@@ -8,6 +8,8 @@ from app.storage.db import get_conn
 
 
 UNIT_SCALE = {"元": 1, "千元": 1000, "万元": 10000, "亿元": 100000000}
+PER_PERSON_NUMERATORS = ("revenue", "total_revenue", "parent_net_profit", "rd_investment")
+PERSON_METRICS = ("employee_count", "rd_staff")
 RANK_METRICS = {SUBSIDIARY_SCOPE: {"revenue", "net_profit"}, MAJOR_SUBSIDIARY_SCOPE: {"revenue", "parent_net_profit"}}
 
 
@@ -74,6 +76,35 @@ class FinancialGraph:
         result = [{"subject": subject, **fact, "evidence": evidence.get(relation_id, [])}
                   for relation_id, subject, fact in rows]
         return {"facts": result, "missing_metrics": sorted(set(metrics) - {row["metric"] for row in result})}
+
+    def per_person(self, year, numerator_metric, people_metric, output_unit, decimal_places):
+        if (numerator_metric not in PER_PERSON_NUMERATORS or people_metric not in PERSON_METRICS
+                or output_unit not in UNIT_SCALE or type(decimal_places) is not int or not 0 <= decimal_places <= 6):
+            raise ValueError("Choose a supported monetary metric, headcount, unit, and 0–6 decimal places")
+        facts = self.facts([numerator_metric, people_metric], year)["facts"]
+        numerator = [fact for fact in facts if fact["metric"] == numerator_metric]
+        people = [fact for fact in facts if fact["metric"] == people_metric]
+        result = {"year": year, "unit": f"{output_unit}/人", "value": None,
+                  "numerator_observations": numerator, "headcount_observations": people}
+        if not numerator or not people:
+            return {**result, "status": "missing_inputs"}
+        if (any(not fact["currency"] or fact["unit"] not in UNIT_SCALE for fact in numerator)
+                or any(fact["unit"] != "人" for fact in people)):
+            return {**result, "status": "incompatible_units"}
+        amounts = {(fact["subject"], fact["currency"], Decimal(fact["value"]) * UNIT_SCALE[fact["unit"]])
+                   for fact in numerator}
+        counts = {(fact["subject"], Decimal(fact["value"])) for fact in people}
+        if len(amounts) != 1 or len(counts) != 1:
+            return {**result, "status": "conflicting_inputs"}
+        subject, currency, amount = next(iter(amounts))
+        people_subject, headcount = next(iter(counts))
+        if subject != people_subject or headcount <= 0 or headcount != headcount.to_integral_value():
+            return {**result, "status": "incompatible_observations"}
+        scaled_amount = amount / UNIT_SCALE[output_unit]
+        value = (scaled_amount / headcount).quantize(Decimal(1).scaleb(-decimal_places), rounding=ROUND_HALF_UP)
+        return {**result, "status": "ok", "value": format(value, "f"), "currency": currency,
+                "numerator_in_output_money_unit": format(scaled_amount, "f"), "headcount": format(headcount, "f"),
+                "expression": f"{scaled_amount:f} {output_unit} / {headcount:f} 人"}
 
     def rank_subsidiaries(self, year, rank_by, sum_metric, top_k, scope=SUBSIDIARY_SCOPE):
         if type(year) is not int or type(top_k) is not int or not 1 <= top_k <= 20:

@@ -247,3 +247,20 @@ Reproduce by adding the following flags to the price-grid command above:
 --route-graph-category direct --route-graph-category calculation \
 --route-graph-category multi_hop --route-graph-category aggregation
 ```
+
+### Experimental exact ratios (not part of the frozen comparisons)
+
+The corrected-input development trace for Midea's 2024 per-employee
+attributable net income gave the right number but an incorrect thousands-to-
+ten-thousands conversion expression. `chat_financial_graph
+--deterministic-ratios` adds an opt-in `financial_per_person` tool that fetches
+the two scoped facts in one call, normalizes the monetary unit, and divides
+using decimal arithmetic. Missing or conflicting inputs, inconsistent
+subjects/units and nonpositive headcount do not return a number. The result
+contains both input observations with page evidence and a checked formula.
+
+Direct PostgreSQL checks on the real Midea and Muyuan graphs returned
+19.42 and 13.38 ten-thousand yuan per year-end employee, and 68.51 and 26.94
+ten-thousand yuan per R&D employee, with both input pages. This verifies
+tool arithmetic and provenance; it does not establish a model-level gain.
+Leave the flag off when reproducing the existing paired comparisons.

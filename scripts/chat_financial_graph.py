@@ -8,11 +8,11 @@ from openai import OpenAI
 
 from app.config import get_settings
 from app.graph.financial import METRICS
-from app.graph.financial_query import FinancialGraph, RANK_METRICS
+from app.graph.financial_query import FinancialGraph, PER_PERSON_NUMERATORS, PERSON_METRICS, RANK_METRICS, UNIT_SCALE
 from scripts.chat_markdown import STRING, ask, tool
 
 
-def graph_ask(question, doc_id, complete, *, trace=None):
+def graph_ask(question, doc_id, complete, *, trace=None, deterministic_ratios=False):
     graph = FinancialGraph(doc_id)
     tools = [
         tool("financial_facts", "Read typed, page-cited facts. Request all inputs of a calculation together. "
@@ -47,10 +47,22 @@ def graph_ask(question, doc_id, complete, *, trace=None):
         "observations, and do not infer a location from a company name alone. Use rank_subsidiaries for "
         "financial rankings or sums; if the user asks about all subsidiaries, never generalize from this subset."
     )
-    return ask(question, None, complete, trace=trace, toolset=(
-        tools, {"financial_facts": graph.facts, "reported_subsidiaries": graph.subsidiaries,
-                "company_locations": graph.company_locations, "rank_subsidiaries": graph.rank_subsidiaries}, guidance,
-    ))
+    dispatch = {"financial_facts": graph.facts, "reported_subsidiaries": graph.subsidiaries,
+                "company_locations": graph.company_locations, "rank_subsidiaries": graph.rank_subsidiaries}
+    if deterministic_ratios:
+        tools.append(tool("financial_per_person", "Compute a report-group money metric per person with exact unit "
+                          "conversion. Cite the two input observations. Reuse the expression and rounded value, "
+                          "rather than deriving another unit conversion.", {
+            "year": {"type": "integer"},
+            "numerator_metric": {"type": "string", "enum": list(PER_PERSON_NUMERATORS)},
+            "people_metric": {"type": "string", "enum": list(PERSON_METRICS)},
+            "output_unit": {"type": "string", "enum": list(UNIT_SCALE)},
+            "decimal_places": {"type": "integer", "minimum": 0, "maximum": 6},
+        }))
+        dispatch["financial_per_person"] = graph.per_person
+        guidance += (" For a requested per-person monetary ratio, use financial_per_person directly. "
+                     "Do not add other conversion formulas, and do not calculate through missing or conflicting inputs.")
+    return ask(question, None, complete, trace=trace, toolset=(tools, dispatch, guidance))
 
 
 def main():
@@ -58,12 +70,14 @@ def main():
     parser.add_argument("doc_id")
     parser.add_argument("question")
     parser.add_argument("--trace", type=Path)
+    parser.add_argument("--deterministic-ratios", action="store_true", help="Enable the experimental exact ratio tool")
     args = parser.parse_args()
     settings = get_settings()
     client = OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
     complete = partial(client.chat.completions.create, model=settings.openai_chat_model)
     with (args.trace.open("x", encoding="utf-8") if args.trace else nullcontext()) as trace:
-        print(graph_ask(args.question, args.doc_id, complete, trace=trace))
+        print(graph_ask(args.question, args.doc_id, complete, trace=trace,
+                        deterministic_ratios=args.deterministic_ratios))
 
 
 if __name__ == "__main__":

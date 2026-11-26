@@ -2,7 +2,8 @@ from pathlib import Path
 
 from app.graph.canonicalize import canonicalize_chunk_graphs
 from app.graph.financial import FinancialExtractor
-from app.graph.financial_query import rank_disclosure
+from app.graph.financial_query import FinancialGraph, rank_disclosure
+from scripts import chat_financial_graph
 from scripts.native_pdf_content_list import html_table
 
 
@@ -90,3 +91,46 @@ def test_major_subsidiaries_use_section_labels_not_equity_cutoff():
         ("revenue", "major_subsidiaries", 2024), ("parent_net_profit", "major_subsidiaries", 2024),
     }
     assert len(facts) == 4
+
+
+def test_exact_per_person_scales_currency_and_fails_closed(monkeypatch):
+    facts = [
+        {"metric": "parent_net_profit", "unit": "千元", "currency": "CNY", "value": "38537237",
+         "subject": "甲", "evidence": [{"page": 9}]},
+        {"metric": "employee_count", "unit": "人", "currency": None, "value": "198432",
+         "subject": "甲", "evidence": [{"page": 82}]},
+    ]
+    graph = FinancialGraph("midea")
+    monkeypatch.setattr(graph, "facts", lambda *_: {"facts": facts})
+    args = (2024, "parent_net_profit", "employee_count", "万元", 2)
+    result = graph.per_person(*args)
+    assert result["status"] == "ok" and result["value"] == "19.42"
+    assert result["numerator_in_output_money_unit"] == "3853723.7"
+    assert result["expression"] == "3853723.7 万元 / 198432 人"
+    assert result["headcount_observations"][0]["evidence"] == [{"page": 82}]
+    facts.append({**facts[0], "unit": "元", "value": "38537237000"})
+    assert graph.per_person(*args)["status"] == "ok"
+    facts.append({**facts[1], "value": "1000"})
+    assert graph.per_person(*args)["status"] == "conflicting_inputs"
+    facts.pop()
+    facts[1]["value"] = "0"
+    invalid = graph.per_person(*args)
+    assert invalid["status"] == "incompatible_observations" and invalid["value"] is None
+    facts.pop(1)
+    assert graph.per_person(*args)["status"] == "missing_inputs"
+
+
+def test_exact_ratio_tool_is_opt_in(monkeypatch):
+    enabled = []
+
+    def ask(_question, _corpus, _complete, *, trace, toolset):
+        tools, dispatch, _guidance = toolset
+        offered = {tool["function"]["name"] for tool in tools}
+        assert set(dispatch) == offered
+        enabled.append("financial_per_person" in offered)
+        return "answer"
+
+    monkeypatch.setattr(chat_financial_graph, "ask", ask)
+    chat_financial_graph.graph_ask("test", "doc", None)
+    chat_financial_graph.graph_ask("test", "doc", None, deterministic_ratios=True)
+    assert enabled == [False, True]
