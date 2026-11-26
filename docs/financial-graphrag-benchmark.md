@@ -11,9 +11,8 @@ for fixture tests.
 - Evaluate the page-faithful input with the same interleaved runner, then run
   the separate holdout. It includes facts intentionally outside the graph
   schema; do not extend the schema using those questions before evaluating it.
-- Expand real-world coverage beyond these two issuers and find a report that
-  discloses comparable data for at least five subsidiaries. Do not treat a
-  one-company ranking or an incomplete-top-five denial as that test.
+- Evaluate the third issuer's positive Top-5 and separate it from the two-report
+  MinerU cohort because the native PDF parser and graph extractor differ.
 - Apply an explicit price table to recorded token usage and report unpriced
   requests separately. Report local resource use separately from API charges.
   Compare offline-plus-online cost at several query volumes. Report cost
@@ -116,3 +115,30 @@ fixed costs are scenarios, not measured labor or infrastructure bills. Both
 offline builders in the current experiment make zero paid model calls (BGE
 embeddings run locally). PDF extraction is shared, and cancels when taking
 the difference. Keep local cold build times separate from billed costs.
+
+### Positive multi-company Top-K on a third issuer
+
+The [Lianchuang Optoelectronic 2024 report](https://static.cninfo.com.cn/finalpage/2025-04-29/1223383548.PDF)
+shows five subsidiaries and three associates in separate row groups on physical
+page 26. The registration table for the profit leader is on physical page 181.
+The graph has a separate `major_subsidiaries` scope: use the report's row group,
+not an equity percentage threshold. It excludes associates before ranking and
+does not treat subsidiary attributable net profit as unqualified net profit.
+
+Build the shared cache without downloading OCR model weights:
+
+```sh
+uv run --no-project --with pdfplumber==0.11.11 python scripts/native_pdf_content_list.py \
+  lianchuang-2024.pdf native-cache/lianchuang-2024/native/lianchuang-2024_content_list.json
+```
+
+This is a native-text/ruled-table input for both arms, not MinerU output. It uses
+the same content-list interchange format the fixed Search Tools baseline can
+read. Keep native extraction cost and results separate from the MinerU cohort.
+The native parser does not cover scanned or overlapping-table PDFs.
+The actual 211-page extraction produced 819 items in 31.45 seconds. The
+PostgreSQL query independently matched the paper table: total revenue
+302,910.94 ten-thousand yuan and total attributable net profit negative
+9,064.12 ten-thousand yuan. Asking for six companies returns incomplete
+coverage rather than substituting an associate. The paired model evaluation
+uses `data/benchmarks/financial_graphrag_lianchuang_gold.json`.

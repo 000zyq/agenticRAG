@@ -2,15 +2,16 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from app.graph.financial import METRICS, SUBSIDIARY_METRICS, SUBSIDIARY_SCOPE
+from app.graph.financial import MAJOR_SUBSIDIARY_SCOPE, METRICS, SUBSIDIARY_MEMBERSHIP, SUBSIDIARY_SCOPE
 from app.graph.query import _load_evidence_map
 from app.storage.db import get_conn
 
 
 UNIT_SCALE = {"元": 1, "千元": 1000, "万元": 10000, "亿元": 100000000}
+RANK_METRICS = {SUBSIDIARY_SCOPE: {"revenue", "net_profit"}, MAJOR_SUBSIDIARY_SCOPE: {"revenue", "parent_net_profit"}}
 
 
-def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k):
+def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k, scope=SUBSIDIARY_SCOPE):
     values = defaultdict(lambda: defaultdict(set))
     pages = defaultdict(set)
     for name, membership_id, fact_id, fact in rows:
@@ -25,7 +26,7 @@ def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k):
     eligible.sort(key=lambda item: (-item[2], item[0]))
     selected = eligible[:top_k]
     evidence_pages = sorted({page for row in pages.values() for page in row})
-    result = {"scope": SUBSIDIARY_SCOPE, "full_group_coverage": False,
+    result = {"scope": scope, "full_group_coverage": False,
               "disclosed_company_count": len(values), "rank_metric": rank_by, "sum_metric": sum_metric,
               "requested_k": top_k, "missing_or_conflicting_rank_values": missing,
               "evidence_pages": evidence_pages, "ranked": [], "aggregate": None}
@@ -73,11 +74,13 @@ class FinancialGraph:
                   for relation_id, subject, fact in rows]
         return {"facts": result, "missing_metrics": sorted(set(metrics) - {row["metric"] for row in result})}
 
-    def rank_subsidiaries(self, year, rank_by, sum_metric, top_k):
+    def rank_subsidiaries(self, year, rank_by, sum_metric, top_k, scope=SUBSIDIARY_SCOPE):
         if type(year) is not int or type(top_k) is not int or not 1 <= top_k <= 20:
             raise ValueError("Supply an annual fiscal year and a top_k from 1 to 20")
-        if rank_by not in SUBSIDIARY_METRICS.values() or sum_metric not in SUBSIDIARY_METRICS.values():
-            raise ValueError("Ranking and sum metrics must be revenue or net_profit")
+        if scope not in RANK_METRICS:
+            raise ValueError("Choose a supported subsidiary disclosure scope")
+        if rank_by not in RANK_METRICS[scope] or sum_metric not in RANK_METRICS[scope]:
+            raise ValueError(f"Supported ranking and sum metrics for {scope}: {sorted(RANK_METRICS[scope])}")
         with get_conn() as conn, conn.cursor() as cur:
             cur.execute("""
                 WITH facts AS (
@@ -92,13 +95,13 @@ class FinancialGraph:
                 FROM graph_relations member
                 JOIN graph_entities company ON company.entity_id = member.object_entity_id
                 LEFT JOIN facts ON facts.subject_entity_id = company.entity_id
-                WHERE member.doc_id = %s AND member.predicate_family = 'has_subsidiary_financial_disclosure'
+                WHERE member.doc_id = %s AND member.predicate_family = %s
                   AND NOT member.is_aggregated
-            """, (self.doc_id, SUBSIDIARY_SCOPE, str(year), [rank_by, sum_metric], self.doc_id))
+            """, (self.doc_id, scope, str(year), [rank_by, sum_metric], self.doc_id, SUBSIDIARY_MEMBERSHIP[scope]))
             rows = cur.fetchall()
         ids = sorted({relation for row in rows for relation in row[1:3] if relation is not None})
         return {"year": year, **rank_disclosure(rows, _load_evidence_map(ids), rank_by=rank_by,
-                                                sum_metric=sum_metric, top_k=top_k)}
+                                                sum_metric=sum_metric, top_k=top_k, scope=scope)}
 
     def subsidiaries(self, location_terms, location_basis, *, company_names=None):
         if location_basis not in {"registered_in", "operates_in"}:

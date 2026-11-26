@@ -3,6 +3,7 @@ from pathlib import Path
 from app.graph.canonicalize import canonicalize_chunk_graphs
 from app.graph.financial import FinancialExtractor
 from app.graph.financial_query import rank_disclosure
+from scripts.native_pdf_content_list import html_table
 
 
 def test_financial_graph_separates_periods_and_legal_location_types():
@@ -68,3 +69,23 @@ def test_rank_selects_by_revenue_sums_same_companies_and_refuses_incomplete_rank
     tied = {**data[2][3], "value": "30"}
     data[2] = (*data[2][:3], tied)
     assert rank_disclosure(data, evidence, top_k=1, **args)["status"] == "tie_at_cutoff"
+
+
+def test_major_subsidiaries_use_section_labels_not_equity_cutoff():
+    rows = [
+        ["公司名称", "持股比例", "2024年度营业\n收入", "2024年度归属于母公司的净利润"],
+        ["子公司：", None, None, None],
+        ["甲子公司", "47.67", "100", "-5.1"],
+        ["乙子公司", "60", "80", "2"],
+        ["参股子公司：", None, None, None],
+        ["参股公司", "20", "10000", "5000"],
+    ]
+    text = "主要子公司、参股子公司情况\n单位：万元\n" + html_table(rows)
+    graph = FinancialExtractor("报告公司", 2024, "CNY")(text)
+    members = [r["object"] for r in graph["relations"] if r["predicate"] == "has_major_subsidiary_financial_disclosure"]
+    assert members == ["甲子公司", "乙子公司"]
+    facts = [e["attributes"] for e in graph["entities"] if e["type"] == "financial_fact"]
+    assert {(row["metric"], row["scope"], row["year"]) for row in facts} == {
+        ("revenue", "major_subsidiaries", 2024), ("parent_net_profit", "major_subsidiaries", 2024),
+    }
+    assert len(facts) == 4

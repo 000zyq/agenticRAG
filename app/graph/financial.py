@@ -11,10 +11,15 @@ from app.ingest.financial_report import (
 )
 
 
-FINANCIAL_EXTRACTOR_VERSION = "financial_tables_v2"
+FINANCIAL_EXTRACTOR_VERSION = "financial_tables_v3"
 SUBSIDIARY_SCOPE = "material_non_wholly_owned"
+MAJOR_SUBSIDIARY_SCOPE = "major_subsidiaries"
 SUBSIDIARY_METRICS = {"营业收入": "revenue", "净利润": "net_profit"}
+SUBSIDIARY_MEMBERSHIP = {SUBSIDIARY_SCOPE: "has_subsidiary_financial_disclosure",
+                         MAJOR_SUBSIDIARY_SCOPE: "has_major_subsidiary_financial_disclosure"}
 SUBSIDIARY_SECTION = re.compile(r"(?:重要|重大)(?:的)?非全资子公司的主要财务信息")
+MAJOR_SUBSIDIARY_SECTION = re.compile(r"主要子公司[、,及和]参股子公司情况")
+ANNUAL_COLUMN = re.compile(r"(20\d{2})年(?:度|1[-–—至]12月)(营业收入|归属于母公司(?:股东)?的净利润)")
 EXPLICIT_UNIT = re.compile(r"单位:(?:人民币)?(亿元|万元|千元|元)$")
 YEAR = re.compile(r"(20\d{2})\s*年(?:度)?(?:\s*\([^)]*\))?")
 MONEY = re.compile(r"(?:人民币)?(亿元|万元|千元|元)")
@@ -115,6 +120,34 @@ class FinancialExtractor:
                             fact(name, metric, row, year, unit, value, SUBSIDIARY_SCOPE, label)
                 return
 
+        def major_subsidiary_financials(rows, plain_prefix):
+            unit = EXPLICIT_UNIT.search(plain_prefix)
+            if not unit or not MAJOR_SUBSIDIARY_SECTION.search(plain_prefix):
+                return
+            for header_idx, header in enumerate(rows[:6]):
+                if not header or clean(header[0]) not in {"公司名称", "子公司名称", "企业名称"}:
+                    continue
+                cols = [(col, int(period[1]), "revenue" if period[2] == "营业收入" else "parent_net_profit", label)
+                        for col, label in enumerate(header) if (period := ANNUAL_COLUMN.fullmatch(clean(label)))]
+                if not cols:
+                    continue
+                group = None
+                for row in rows[header_idx + 1:]:
+                    name = row[0].strip()
+                    marker = clean(name).rstrip(":")
+                    if marker in {"子公司", "参股公司", "参股子公司"}:
+                        group = marker
+                        continue
+                    if group != "子公司" or not marker or marker in {"合计", "小计", "-", "—"}:
+                        continue
+                    entity(name, "financial_company")
+                    edge(self.issuer, SUBSIDIARY_MEMBERSHIP[MAJOR_SUBSIDIARY_SCOPE], name, row)
+                    for col, year, metric, label in cols:
+                        value = value_from_cell(row[col], unit[1]) if col < len(row) else None
+                        if value is not None:
+                            fact(name, metric, row, year, unit[1], value, MAJOR_SUBSIDIARY_SCOPE, label)
+                return
+
         def subsidiaries(rows):
             for idx, header in enumerate(rows[:8]):
                 columns = {clean(value): col for col, value in enumerate(header)}
@@ -147,6 +180,7 @@ class FinancialExtractor:
                 continue
             subsidiaries(rows)
             subsidiary_financials(rows, plain_prefix)
+            major_subsidiary_financials(rows, plain_prefix)
             years = {}
             labels = {METRICS.get(metric_label(row[0])) for row in rows if row}
             context = clean(text[max(0, table.start() - 160):table.start()])

@@ -8,7 +8,7 @@ from openai import OpenAI
 
 from app.config import get_settings
 from app.graph.financial import METRICS
-from app.graph.financial_query import FinancialGraph
+from app.graph.financial_query import FinancialGraph, RANK_METRICS
 from scripts.chat_markdown import STRING, ask, tool
 
 
@@ -29,12 +29,14 @@ def graph_ask(question, doc_id, complete, *, trace=None):
             "company_names": {"type": "array", "items": STRING},
             "location_basis": {"type": "string", "enum": ["registered_in", "operates_in"]},
         }),
-        tool("rank_subsidiaries", "Rank the disclosed material non-wholly-owned subsidiaries by annual "
-             "revenue or net profit and sum one metric over the selected companies. Never represents all "
-             "group subsidiaries. Missing values, insufficient K and cutoff ties are reported.", {
+        tool("rank_subsidiaries", "Rank annual revenue or profit and sum one metric over the same companies. "
+             "material_non_wholly_owned = 重要非全资子公司主要财务信息 (net_profit); "
+             "major_subsidiaries = 主要子公司、参股子公司情况中的子公司 (parent_net_profit, excludes associates). "
+             "Each supports revenue. Neither is all group subsidiaries.", {
             "year": {"type": "integer"}, "top_k": {"type": "integer", "minimum": 1, "maximum": 20},
-            "rank_by": {"type": "string", "enum": ["revenue", "net_profit"]},
-            "sum_metric": {"type": "string", "enum": ["revenue", "net_profit"]},
+            "scope": {"type": "string", "enum": list(RANK_METRICS)},
+            "rank_by": {"type": "string", "enum": sorted(set.union(*RANK_METRICS.values()))},
+            "sum_metric": {"type": "string", "enum": sorted(set.union(*RANK_METRICS.values()))},
         }),
     ]
     guidance = (

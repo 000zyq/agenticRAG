@@ -1,0 +1,55 @@
+{
+  "questions": [
+    {
+      "id": "lianchuang-top-five-by-revenue",
+      "report": "lianchuang",
+      "category": "aggregation",
+      "question": "联创光电2024年报中，按“主要子公司、参股子公司情况”表，只在标为子公司而不是参股子公司的公司里，按营业收入从高到低选前五家。请列出五家公司、营业收入合计，以及这些公司归属于母公司的净利润合计，两项用万元，引用原页。",
+      "slots": [
+        {"id": "revenue", "any_of": ["(?<![0-9.])302910\\.94\\s*万元"]},
+        {"id": "attributable_profit", "any_of": ["(?:-|−|负)\\s*9064\\.12\\s*万元", "亏损\\s*9064\\.12\\s*万元"]},
+        {"id": "hua_lian", "any_of": ["厦门华联电子"]},
+        {"id": "zhi_guang", "any_of": ["江西联创致光"]},
+        {"id": "lian_zhi", "any_of": ["深圳市联志光电"]},
+        {"id": "dian_lan", "any_of": ["江西联创电缆"]},
+        {"id": "zhong_jiu", "any_of": ["中久光电产业"]}
+      ],
+      "evidence": [["第\\s*26\\s*页", "\\bp\\.?\\s*26\\b"]]
+    },
+    {
+      "id": "lianchuang-top-three-profit",
+      "report": "lianchuang",
+      "category": "aggregation",
+      "question": "只在联创光电2024年报“主要子公司、参股子公司情况”表的子公司组中，按营业收入取前三家。这三家的2024年归属于母公司的净利润合计是多少万元？注意不是按利润排序，并给出三家名称和出处。",
+      "slots": [
+        {"id": "attributable_profit", "any_of": ["(?:-|−|负)\\s*6113\\.23\\s*万元", "亏损\\s*6113\\.23\\s*万元"]},
+        {"id": "hua_lian", "any_of": ["厦门华联电子"]},
+        {"id": "zhi_guang", "any_of": ["江西联创致光"]},
+        {"id": "lian_zhi", "any_of": ["深圳市联志光电"]}
+      ],
+      "evidence": [["第\\s*26\\s*页", "\\bp\\.?\\s*26\\b"]]
+    },
+    {
+      "id": "lianchuang-profit-leader-registration",
+      "report": "lianchuang",
+      "category": "multi_hop",
+      "question": "只在联创光电2024年报“主要子公司、参股子公司情况”表的子公司组中，2024年归属于母公司的净利润最高的公司是谁？这家公司在企业集团构成附注中列明的注册地是哪里？请引用两处。",
+      "slots": [
+        {"id": "company", "any_of": ["厦门华联电子股份有限公司"]},
+        {"id": "registered_city", "any_of": ["注册(?:地|于)[^。\\n]{0,30}厦门"]}
+      ],
+      "evidence": [["第\\s*26\\s*页", "\\bp\\.?\\s*26\\b"], ["第\\s*181\\s*页", "\\bp\\.?\\s*181\\b"]]
+    },
+    {
+      "id": "lianchuang-top-six-unavailable",
+      "report": "lianchuang",
+      "category": "insufficient_coverage",
+      "question": "仅用联创光电2024年报“主要子公司、参股子公司情况”表里的子公司组，能否计算营业收入前六家子公司的收入合计？不要借用参股公司。说明原因和出处。",
+      "slots": [
+        {"id": "unavailable", "any_of": ["不能", "无法", "不足", "不够"]},
+        {"id": "company_count", "any_of": ["(?:5|五)\\s*家"]}
+      ],
+      "evidence": [["第\\s*26\\s*页", "\\bp\\.?\\s*26\\b"]]
+    }
+  ]
+}
