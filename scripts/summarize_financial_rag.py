@@ -17,10 +17,15 @@ def matches(text, alternatives):
 
 
 def score(run, gold):
-    text = unicodedata.normalize("NFKC", run["answer"]).replace(",", "")
-    slots = {slot["id"]: matches(text, slot["any_of"]) for slot in gold["slots"]}
-    forbidden = [pattern for pattern in gold.get("forbid", []) if matches(text, [pattern])]
-    citation = all(matches(text, choices) for choices in gold["evidence"])
+    text = unicodedata.normalize("NFKC", run["answer"])
+    values = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", text)
+    slots = {slot["id"]: matches(values, slot["any_of"]) for slot in gold["slots"]}
+    forbidden = [pattern for pattern in gold.get("forbid", []) if matches(values, [pattern])]
+    # Expand explicit page lists, not ranges or unqualified numbers.
+    citations = re.sub(r"第\s*(\d+(?:\s*[,、和及]\s*\d+)+)\s*页",
+                       lambda match: "、".join(f"第{n}页" for n in re.findall(r"\d+", match[1])),
+                       text)
+    citation = all(matches(citations, choices) for choices in gold["evidence"])
     succeeded = run["status"] == "ok"
     answer_correct = succeeded and all(slots.values()) and not forbidden
     return {

@@ -1,4 +1,13 @@
-from scripts.summarize_financial_rag import summarize_runs
+from scripts.summarize_financial_rag import score, summarize_runs
+
+
+def test_score_accepts_explicit_grouped_citations_without_inventing_pages():
+    gold = {"slots": [{"id": "num", "any_of": [r"133642人"]}],
+            "evidence": [[r"第9页"], [r"第82页"]]}
+    run = {"status": "ok", "answer": "133,642人（第９、８２页）"}
+    assert score(run, gold)["joint_correct"]
+    run["answer"] = "133,642人（第9–83页）"
+    assert not score(run, gold)["citation_correct"]
 
 
 def test_paired_cost_parity_and_joint_accuracy():

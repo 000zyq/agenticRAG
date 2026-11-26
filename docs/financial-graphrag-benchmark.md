@@ -79,3 +79,16 @@ physical page 227. The shared MinerU content list merges the table into page
 unmerged table in page 227's `preproc_blocks`, which can support a later
 provenance correction. Keep results for the frozen input separate from any
 rerun with corrected input.
+
+`scripts.restore_mineru_table_pages` now prepares a separate content list from
+the matching middle JSON without changing the original cache. The script
+validates table ordering against the final HTML, restores the original
+fragments by page and table bounding box, and refuses to overwrite an existing
+output. Put its output under a separate MinerU output root, preserving the
+report subdirectory and content-list filename, then use that root for **both**
+arms and rebuild each index. This restored 54 Midea and 178 Muyuan table
+fragments in the current cache. In the corrected Muyuan input the extractor
+returns the Shangcai registration row on page 227 instead of page 224. The
+corrected graph builds took 0.29 and 0.91 seconds respectively, excluding
+initial PDF parsing; this confirms the locator correction, not QA accuracy
+across the entire corpus.
