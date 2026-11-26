@@ -74,12 +74,12 @@ def test_locate_links_continuation_and_matches_terms_in_one_header():
     assert tools.locate(["公司名称", "净利润"], "text", "all")["hits"] == 2
 
 
-def test_third_model_round_can_only_answer():
+def test_fourth_model_round_can_only_answer():
     offered_tools = []
 
     def complete(messages, **kwargs):
         offered_tools.append(kwargs.get("tool_choice"))
-        if len(offered_tools) == 3:
+        if len(offered_tools) == 4:
             assert messages[-1]["role"] == "tool"
             assert json.loads(messages[-1]["content"])["page"] == 5
             msg = SimpleNamespace(tool_calls=[], content="营收见第 5 页。")
@@ -91,8 +91,10 @@ def test_third_model_round_can_only_answer():
 
     trace = StringIO()
     assert ask("营收在哪一页？", MarkdownTools([(5, "营收")], None), complete, trace=trace) == "营收见第 5 页。"
-    assert offered_tools == [None, None, "none"]
-    assert json.loads(trace.getvalue().splitlines()[-1])["turn"] == 3
+    assert offered_tools == [None, None, None, "none"]
+    events = [json.loads(line) for line in trace.getvalue().splitlines()]
+    assert [event["turn"] for event in events if event["event"] == "tool_call"] == [1, 2, 3]
+    assert events[-1]["turn"] == 4
 
 
 @pytest.mark.skipif(which("rg") is None, reason="ripgrep not installed")
