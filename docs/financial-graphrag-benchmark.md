@@ -222,3 +222,28 @@ The latter is a conditional sample estimate: it is not a guarantee that a
 runtime router can select only winning cases. The data supports graph-first
 evaluation for well-covered typed questions, not replacing Search Tools for
 the full workload.
+
+#### Category-labeled route replay (not a deployed third arm)
+
+Replay a fixed rule on the same twelve paired answers: use graph for direct
+typed questions, calculation, multi-hop and scoped aggregation; use Search
+Tools for outside-schema and insufficient-coverage questions. The rule sees
+only the manifest's category, not the answer or grade. It selected graph
+for seven questions and Search Tools for five, with 12/12 joint-correct in
+this replay. Simulated P50 was 16.19 seconds versus 19.05 for all-search;
+P95 was unchanged at 51.02 seconds. Estimated model cost was
+RMB 0.0718–0.1113 per question, saving RMB 0.0310–0.0546 versus all-search.
+At a hypothetical RMB 10 incremental expense the mixed traffic takes
+**184–323 attempts** to reach cost parity. This denominator is all routed
+traffic, not seven preselected successes. It excludes the time and cost of
+classifying, retrying or falling back in production. Broad category names are
+not a sufficient production router; verify that the report has the required
+period, scope, metrics and edges before selecting graph.
+
+Reproduce by adding the following flags to the price-grid command above:
+
+```sh
+--reviews data/benchmarks/financial_graphrag_holdout_adjudications.json \
+--route-graph-category direct --route-graph-category calculation \
+--route-graph-category multi_hop --route-graph-category aggregation
+```

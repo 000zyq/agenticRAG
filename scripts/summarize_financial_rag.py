@@ -139,9 +139,9 @@ def paired_statistics(rows):
     }
 
 
-def summarize_arms(rows):
+def summarize_arms(rows, *, arms=ARMS):
     summary = {}
-    for arm in ARMS:
+    for arm in arms:
         group = [row for row in rows if row["arm"] == arm]
         elapsed = sorted(row["elapsed_seconds"] for row in group)
         costs = [row["api_cost"] for row in group]
