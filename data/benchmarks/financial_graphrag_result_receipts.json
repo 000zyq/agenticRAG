@@ -1,0 +1,186 @@
+{
+  "holdout": {
+    "local_artifact_directory": "page-faithful/holdout-qwen",
+    "runs_sha256": "441d255b9d7d37eb3d78687fbe50921259df91c767d4df8404b8e9b74cf50db4",
+    "source": {
+      "model": "qwen3.8-max-0902",
+      "baseline_commit": "c02472121f6f79ecef690a8120bac5cc16ff0abe",
+      "graph_commit": "9ae01548bd7317e6bfdc6639f9a4c787c80bba82",
+      "graph_tracked_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "manifest_sha256": "b7ef0f167e35944c30ad488bf5d3779a7af4bde49718b73d8ff2808384c808fe",
+      "reports": {
+        "midea": {
+          "pdf_sha256": "b17a9b9b84bca1d2a4e4a3cadc5dd5ba5c85e3f1fd2d758acd3315b5b040ecd9",
+          "content_list_sha256": "e2dc66560b8f61d8ef7f0e76cae5b237ddeb71b0cfbddd2f20b11bb477be23a1",
+          "graph_doc_id": "ab0845c96ac15be5aa7d57bd3be2c7c9bde8b4403e90bfb85f023d2446fb06d5"
+        },
+        "muyuan": {
+          "pdf_sha256": "b26c4441b34feef43d1124e6372fb858c8455f6851b19f31504a10fdc6ba4de5",
+          "content_list_sha256": "9369f51f085f72b7cbb8155bc2a8f02a3bca898d0fccaf3d17283b66cfc89d97",
+          "graph_doc_id": "be08c7d1bc2ab49dac53760d58b50c6ec6f5606828be76299f02a4353aabf8fa"
+        }
+      },
+      "timeout_seconds": 180
+    },
+    "equivalent_graph_revision": "9ae01548bd7317e6bfdc6639f9a4c787c80bba82",
+    "n_questions": 12,
+    "verified_trace_records": 24,
+    "arms": {
+      "search_tools": {
+        "n": 12,
+        "failed": 0,
+        "answer_correct": 12,
+        "citation_correct": 12,
+        "joint_correct": 12,
+        "reviewed": 1,
+        "p50_seconds": 19.054507895489223,
+        "p95_seconds": 51.02384879102465,
+        "mean_input_tokens": 11349.583333333334,
+        "mean_output_tokens": 823.5833333333334,
+        "p50_model_seconds": 17.842,
+        "model_price_per_attempt_range": [
+          "0.102868",
+          "0.165844"
+        ]
+      },
+      "graphrag": {
+        "n": 12,
+        "failed": 0,
+        "answer_correct": 7,
+        "citation_correct": 8,
+        "joint_correct": 7,
+        "reviewed": 5,
+        "p50_seconds": 13.903242228960153,
+        "p95_seconds": 51.385093249962665,
+        "mean_input_tokens": 3486.8333333333335,
+        "mean_output_tokens": 706.9166666666666,
+        "p50_model_seconds": 13.218499999999999,
+        "model_price_per_attempt_range": [
+          "0.040411",
+          "0.067291"
+        ]
+      }
+    }
+  },
+  "development": {
+    "local_artifact_directory": "page-faithful/development-qwen",
+    "runs_sha256": "c97477849160cf10778435efac88b25344df2affb8ee20124cfac2e1e317b7a3",
+    "source": {
+      "model": "qwen3.8-max-0902",
+      "baseline_commit": "c02472121f6f79ecef690a8120bac5cc16ff0abe",
+      "graph_commit": "9ae01548bd7317e6bfdc6639f9a4c787c80bba82",
+      "graph_tracked_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "manifest_sha256": "fbd249a1fab43638a9a8d6ae18601322a9074007b3729d3eef61dafad27b27d9",
+      "reports": {
+        "midea": {
+          "pdf_sha256": "b17a9b9b84bca1d2a4e4a3cadc5dd5ba5c85e3f1fd2d758acd3315b5b040ecd9",
+          "content_list_sha256": "e2dc66560b8f61d8ef7f0e76cae5b237ddeb71b0cfbddd2f20b11bb477be23a1",
+          "graph_doc_id": "ab0845c96ac15be5aa7d57bd3be2c7c9bde8b4403e90bfb85f023d2446fb06d5"
+        },
+        "muyuan": {
+          "pdf_sha256": "b26c4441b34feef43d1124e6372fb858c8455f6851b19f31504a10fdc6ba4de5",
+          "content_list_sha256": "9369f51f085f72b7cbb8155bc2a8f02a3bca898d0fccaf3d17283b66cfc89d97",
+          "graph_doc_id": "be08c7d1bc2ab49dac53760d58b50c6ec6f5606828be76299f02a4353aabf8fa"
+        }
+      },
+      "timeout_seconds": 180
+    },
+    "equivalent_graph_revision": "9ae01548bd7317e6bfdc6639f9a4c787c80bba82",
+    "n_questions": 12,
+    "verified_trace_records": 24,
+    "arms": {
+      "search_tools": {
+        "n": 12,
+        "failed": 0,
+        "answer_correct": 12,
+        "citation_correct": 12,
+        "joint_correct": 12,
+        "reviewed": 0,
+        "p50_seconds": 22.820509479031898,
+        "p95_seconds": 84.10808625002392,
+        "mean_input_tokens": 12290,
+        "mean_output_tokens": 1234.5833333333333,
+        "p50_model_seconds": 21.811,
+        "model_price_per_attempt_range": [
+          "0.132405",
+          "0.191925"
+        ]
+      },
+      "graphrag": {
+        "n": 12,
+        "failed": 0,
+        "answer_correct": 8,
+        "citation_correct": 11,
+        "joint_correct": 8,
+        "reviewed": 4,
+        "p50_seconds": 12.836708271002863,
+        "p95_seconds": 29.815808499930426,
+        "mean_input_tokens": 3231,
+        "mean_output_tokens": 458.6666666666667,
+        "p50_model_seconds": 12.189,
+        "model_price_per_attempt_range": [
+          "0.02866",
+          "0.055284"
+        ]
+      }
+    }
+  },
+  "lianchuang_topk": {
+    "local_artifact_directory": "lianchuang-native/paired-qwen",
+    "runs_sha256": "4063241bf321f70240e8ad131b2b636e9b072bfd4cd0ae41ea4eb66f73d20575",
+    "source": {
+      "model": "qwen3.8-max-0902",
+      "baseline_commit": "c02472121f6f79ecef690a8120bac5cc16ff0abe",
+      "graph_commit": "d4633aa79de35747005795fa159a973cd31f211b",
+      "graph_tracked_patch_sha256": "f4ae304aaa009c7042e08d42a911c2a14b7d118d1fbe7354b6898a83b3d5b3c3",
+      "manifest_sha256": "3ec67868988eadefcb1ebc54ffc4e1d2b0b34bb6b57dda89c53d3405de8012d3",
+      "reports": {
+        "lianchuang": {
+          "pdf_sha256": "c38011d93c7ce65cc868b046fb2dd5ec595a8f44648da449cbe5fd5b44d68d7d",
+          "content_list_sha256": "e860d4944f2d314761feece5f234ea526fba5c415273ba7834ffb9aed3353daa",
+          "graph_doc_id": "cbe83291f1ef46634e5dcf0969369b3b9bbd20aefb389c0aedb8b76ce1343db5"
+        }
+      },
+      "timeout_seconds": 180
+    },
+    "equivalent_graph_revision": "a4edaae957955348e0132d03d467b3784a29a127",
+    "n_questions": 4,
+    "verified_trace_records": 8,
+    "arms": {
+      "search_tools": {
+        "n": 4,
+        "failed": 0,
+        "answer_correct": 4,
+        "citation_correct": 4,
+        "joint_correct": 4,
+        "reviewed": 0,
+        "p50_seconds": 28.8139895000495,
+        "p95_seconds": 35.1710440000752,
+        "mean_input_tokens": 11159.25,
+        "mean_output_tokens": 1127.5,
+        "p50_model_seconds": 27.183999999999997,
+        "model_price_per_attempt_range": [
+          "0.114213",
+          "0.174501"
+        ]
+      },
+      "graphrag": {
+        "n": 4,
+        "failed": 0,
+        "answer_correct": 3,
+        "citation_correct": 4,
+        "joint_correct": 3,
+        "reviewed": 1,
+        "p50_seconds": 15.142774104024284,
+        "p95_seconds": 25.545863540959544,
+        "mean_input_tokens": 3667,
+        "mean_output_tokens": 703.75,
+        "p50_model_seconds": 14.509,
+        "model_price_per_attempt_range": [
+          "0.044763",
+          "0.069339"
+        ]
+      }
+    }
+  }
+}

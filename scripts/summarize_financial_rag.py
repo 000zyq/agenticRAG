@@ -19,7 +19,7 @@ def matches(text, alternatives):
 
 def score(run, gold):
     text = unicodedata.normalize("NFKC", run["answer"])
-    values = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", text)
+    values = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", text).translate(str.maketrans("−‐‑", "---"))
     slots = {slot["id"]: matches(values, slot["any_of"]) for slot in gold["slots"]}
     forbidden = [pattern for pattern in gold.get("forbid", []) if matches(values, [pattern])]
     # Expand explicit page lists, not ranges or unqualified numbers.

@@ -15,6 +15,13 @@ def test_score_accepts_explicit_grouped_citations_without_inventing_pages():
     assert not score(run, gold)["citation_correct"]
 
 
+def test_score_accepts_typographic_negative_without_accepting_positive():
+    gold = {"slots": [{"id": "net", "any_of": [r"-9064\.12\s*万元"]}], "evidence": [[r"第26页"]]}
+    for sign in ("-", "−", "‐", "‑"):
+        assert score({"status": "ok", "answer": f"{sign}9,064.12 万元（第26页）"}, gold)["joint_correct"]
+    assert not score({"status": "ok", "answer": "9,064.12 万元（第26页）"}, gold)["answer_correct"]
+
+
 def test_paired_cost_parity_and_joint_accuracy():
     question = {"id": "q", "report": "r", "category": "fact",
                 "slots": [{"id": "num", "any_of": [r"(?<!\d)10人"]}],

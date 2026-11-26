@@ -1,0 +1,10 @@
+[
+  {
+    "question_id": "lianchuang-top-three-profit",
+    "arm": "graphrag",
+    "answer_sha256": "1f5f13191786ad3c1d25aa7ac6f7f8a4a19ef951e2363e6f56c5a2321fd35b3d",
+    "answer_correct": false,
+    "citation_correct": true,
+    "note": "The three companies, subtotal and p26 are correct, but the answer calls yuan the original disclosure unit. The p26 table is explicitly in ten-thousand yuan; the tool normalized those numbers to yuan. Source unit misrepresentation is material under strict financial grading."
+  }
+]

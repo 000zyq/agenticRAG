@@ -6,17 +6,42 @@ model and answer budget. Measure warm queries separately from offline indexing.
 Use a separate PostgreSQL schema for evaluation and an isolated Milvus index
 for fixture tests.
 
-## Work remaining
+## Findings
 
-- Evaluate the page-faithful input with the same interleaved runner, then run
-  the separate holdout. It includes facts intentionally outside the graph
-  schema; do not extend the schema using those questions before evaluating it.
-- Evaluate the third issuer's positive Top-5 and separate it from the two-report
-  MinerU cohort because the native PDF parser and graph extractor differ.
-- Apply an explicit price table to recorded token usage and report unpriced
-  requests separately. Report local resource use separately from API charges.
-  Compare offline-plus-online cost at several query volumes. Report cost
-  parity only where the query savings can offset incremental offline costs.
+The main comparison covers 28 distinct questions across three reports; the
+original-input pilot and early replay are diagnostic and excluded. All arms
+used `qwen3.8-max-0902`; no fallback models were needed. Page data was common
+within each pair: the PostgreSQL graph inputs matched the frozen shared cache
+exactly (295 Midea, 272 nonempty Muyuan, 211 Lianchuang pages). The graph
+extractor version and parser differ for Lianchuang, so do not pool the three
+cohorts into a single production accuracy estimate.
+
+| Cohort | Search Tools joint correct | GraphRAG joint correct | P50 Search / Graph s |
+| --- | ---: | ---: | ---: |
+| Midea + Muyuan independent MinerU holdout | 12/12 | 7/12 | 19.05 / 13.90 |
+| Midea + Muyuan corrected development replay | 12/12 | 8/12 | 22.82 / 12.84 |
+| Lianchuang native-PDF scope / Top-K | 4/4 | 3/4 | 28.81 / 15.14 |
+
+Use the graph where the report, period, aggregation scope and relevant
+typed observations are verified. Keep full-document search for long-tail
+facts and verification of incomplete disclosure. The graph was faster at
+the median in all three samples, and both arms solved real Top-5, but the
+graph was not more accurate. Typed reads and exact operations avoid much
+retrieval work; they neither increase schema coverage nor guarantee that the
+model will explain units and scope correctly.
+
+There is no incremental API bill for the measured deterministic build.
+On the independent holdout, the seven pairs of matching-quality answers
+suggest 107–189 queries per hypothetical CNY 10 of extra setup cost. In
+the category-labeled mixed workload, which retains search for five of
+twelve questions, 184–323 total queries are required at that same cost.
+These are modeled break-even ranges, not observed invoices or an automated
+routing result.
+
+`data/benchmarks/financial_graphrag_result_receipts.json` records the commit
+and shared-input hashes, the exact run hashes, and the verified trace counts
+for all 56 measured answers. The local output directory named in each receipt
+is relative to the experiment cache root (`tmp/financial-graphrag-results`).
 
 ## Current build path
 
@@ -141,7 +166,28 @@ PostgreSQL query independently matched the paper table: total revenue
 302,910.94 ten-thousand yuan and total attributable net profit negative
 9,064.12 ten-thousand yuan. Asking for six companies returns incomplete
 coverage rather than substituting an associate. The paired model evaluation
-uses `data/benchmarks/financial_graphrag_lianchuang_gold.json`.
+uses `data/benchmarks/financial_graphrag_lianchuang_gold.json`. The four
+questions ran under the frozen Search Tools revision `c024721` and graph
+source snapshot equivalent to `a4edaae`. Both got Top-5 correct; the graph
+completed that question in 25.55 s versus 31.24 s. Both got the cross-page
+profit leader and registration right, as well as refusing a Top-6 sum from
+a five-company table. For Top-3 the graph got the names, total and page
+right, but called yuan the original table unit; p26 says ten-thousand yuan
+and the values had only been normalized to yuan by the tool. That is a
+material error, recorded in the hash-bound adjudication. The regex scorer
+normalizes typographic minus without accepting positive profit.
+
+| Native-PDF four-question results | Search Tools | GraphRAG |
+| --- | ---: | ---: |
+| Answer and evidence both correct | 4/4 | 3/4 |
+| P50 end-to-end s | 28.81 | 15.14 |
+| P95 end-to-end s | 35.17 | 25.55 |
+| Estimated model cost per attempt, CNY | 0.1142–0.1745 | 0.0448–0.0693 |
+| Estimated model cost per joint-correct answer, CNY | 0.1142–0.1745 | 0.0597–0.0925 |
+
+At CNY 10 incremental modeled cost, the three matching-quality results
+imply 100–142 similar questions. Four queries on a single issuer do not
+support a broad Top-K accuracy claim.
 
 ### Cold indexing and amortization replay
 
@@ -161,6 +207,11 @@ index builds spend zero billed model tokens. There is no incremental
 graph-build API cost to recover in this setup. Treat engineer time, ongoing
 schema maintenance and concurrent database/embedding infrastructure as
 separate deployment inputs.
+
+In the separate Lianchuang native-PDF experiment, the cold index builds took
+177.31 seconds for Search Tools and 0.58 seconds for typed graph. Both reuse
+the same 31.45-second native extraction; it is not counted in either index
+time and is not comparable to the MinerU intake time.
 
 ```sh
 uv run python -m scripts.price_financial_rag runs.json gold.json \
@@ -264,6 +315,11 @@ Direct PostgreSQL checks on the real Midea and Muyuan graphs returned
 ten-thousand yuan per R&D employee, with both input pages. This verifies
 tool arithmetic and provenance; it does not establish a model-level gain.
 Leave the flag off when reproducing the existing paired comparisons.
+In a separate end-to-end Qwen regression, the model called
+`financial_per_person` and returned 19.42 ten-thousand yuan per person,
+disclosed input pages 9 and 82, and the correct conversion to 3,853,723.7
+ten-thousand yuan. This is a single development case (not a new
+independent accuracy estimate).
 
 ### Corrected-input development replay
 
