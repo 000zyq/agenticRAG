@@ -42,7 +42,7 @@ def render(events):
             results[event["id"]] = event
     maximum = max((row["duration_ms"] for row in results.values()), default=0) or 1
     question = next((row["question"] for row in events if row["event"] == "start"), "")
-    status = {"answer": "Completed", "step_limit": "Round limit reached",
+    status = {"answer": "Completed", "answer_error": "Invalid answer", "step_limit": "Round limit reached",
               "model_error": "Model request failed"}.get(events[-1]["event"], "Incomplete")
     parts = [
         '<!doctype html><html lang="en"><meta charset="utf-8">',
@@ -89,7 +89,7 @@ def render(events):
                                                         ensure_ascii=False, indent=2)))
             elif kind == "answer":
                 parts.append(_details("Final answer", row["answer"] or ""))
-            elif kind == "model_error":
+            elif kind in {"model_error", "answer_error"}:
                 parts.append(_details("Model error", row["error_type"]))
         parts.append("</section>")
     parts.append("</main></html>")

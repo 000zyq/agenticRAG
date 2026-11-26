@@ -78,10 +78,12 @@ def test_fourth_model_round_can_only_answer():
     offered_tools = []
 
     def complete(messages, **kwargs):
-        offered_tools.append(kwargs.get("tool_choice"))
+        offered_tools.append("tools" in kwargs)
         if len(offered_tools) == 4:
-            assert messages[-1]["role"] == "tool"
-            assert json.loads(messages[-1]["content"])["page"] == 5
+            assert [msg["role"] for msg in messages] == ["system", "user"]
+            data = json.loads(messages[-1]["content"])
+            assert data["question"] == "营收在哪一页？"
+            assert [row["page"] for row in data["retrieved_evidence"]] == [5, 5, 5]
             msg = SimpleNamespace(tool_calls=[], content="营收见第 5 页。")
         else:
             function = SimpleNamespace(name="read", arguments='{"passage":0}')
@@ -91,10 +93,26 @@ def test_fourth_model_round_can_only_answer():
 
     trace = StringIO()
     assert ask("营收在哪一页？", MarkdownTools([(5, "营收")], None), complete, trace=trace) == "营收见第 5 页。"
-    assert offered_tools == [None, None, None, "none"]
+    assert offered_tools == [True, True, True, False]
     events = [json.loads(line) for line in trace.getvalue().splitlines()]
     assert [event["turn"] for event in events if event["event"] == "tool_call"] == [1, 2, 3]
     assert events[-1]["turn"] == 4
+
+
+@pytest.mark.parametrize("answer", [
+    '::tool_call:: read\n{"passage": 0}\n::end::',
+    '<br>\n<function_calls><invoke name="read">',
+    " ",
+])
+def test_tool_directives_and_empty_text_are_not_returned_as_answers(answer):
+    def complete(**kwargs):
+        msg = SimpleNamespace(tool_calls=[], content=answer)
+        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+    trace = StringIO()
+    with pytest.raises(RuntimeError, match="instead of an answer"):
+        ask("profit?", MarkdownTools([(1, "profit")], None), complete, trace=trace)
+    assert json.loads(trace.getvalue().splitlines()[-1])["event"] == "answer_error"
 
 
 @pytest.mark.skipif(which("rg") is None, reason="ripgrep not installed")
