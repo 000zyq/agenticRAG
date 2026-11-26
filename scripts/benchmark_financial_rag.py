@@ -1,5 +1,6 @@
 """Run paired GraphRAG and frozen Search Tools queries with identical model settings."""
 import argparse
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,14 @@ MODELS = ("qwen3.8-max-0902", "deepseek-v4.1-flash",
 
 def git(worktree, *args):
     return subprocess.check_output(["git", "-C", str(worktree), *args], text=True).strip()
+
+
+def file_digest(path):
+    with path.open("rb") as source:
+        digest = sha256()
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def trace_metrics(path):
@@ -81,9 +90,23 @@ def main():
     env = {**os.environ, **{k: v for k, v in dotenv_values(args.env_file).items() if v is not None},
            "OPENAI_CHAT_MODEL": args.model, "MINERU_OUTPUT_DIR": str(args.mineru_output.resolve()),
            "MINERU_CMD": "false"}
+    project = Path(__file__).resolve().parents[1]
+    freeze = {}
+    for name, report in reports.items():
+        pdf = (args.manifest.parent / report["path"]).resolve()
+        candidates = sorted((args.mineru_output / pdf.stem).rglob("*_content_list.json"))
+        if len(candidates) != 1:
+            parser.error(f"Expected exactly one cached content list for report {name}")
+        freeze[name] = {"pdf_sha256": file_digest(pdf), "content_list_sha256": file_digest(candidates[0]),
+                        "graph_doc_id": report["graph_doc_id"]}
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
-    project = Path(__file__).resolve().parents[1]
+    (out / "experiment.json").write_text(json.dumps({
+        "model": args.model, "baseline_commit": git(args.baseline, "rev-parse", "HEAD"),
+        "graph_commit": git(project, "rev-parse", "HEAD"),
+        "graph_tracked_patch_sha256": sha256(git(project, "diff", "HEAD").encode()).hexdigest(),
+        "manifest_sha256": file_digest(args.manifest), "reports": freeze, "timeout_seconds": args.timeout,
+    }, indent=2), encoding="utf-8")
     rows = []
     for index, item in enumerate(manifest["questions"]):
         report = reports[item["report"]]

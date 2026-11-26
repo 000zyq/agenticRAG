@@ -34,7 +34,7 @@ def _span_for_mention(text: str, mention: str) -> tuple[int | None, int | None]:
 def _predicate_family(predicate: str) -> str | None:
     norm = predicate.lower()
     if norm in {"has_reported_subsidiary", "registered_in", "operates_in", "has_financial_fact",
-                "has_subsidiary_candidate"}:
+                "has_subsidiary_candidate", "has_subsidiary_financial_disclosure"}:
         return norm
     if any(token in norm for token in ("acquire", "收购", "并购")):
         return "acquisition"

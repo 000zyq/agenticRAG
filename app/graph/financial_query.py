@@ -1,7 +1,49 @@
 """Query typed financial observations without scanning report text."""
-from app.graph.financial import METRICS
+from collections import defaultdict
+from decimal import Decimal
+
+from app.graph.financial import METRICS, SUBSIDIARY_METRICS, SUBSIDIARY_SCOPE
 from app.graph.query import _load_evidence_map
 from app.storage.db import get_conn
+
+
+UNIT_SCALE = {"元": 1, "千元": 1000, "万元": 10000, "亿元": 100000000}
+
+
+def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k):
+    values = defaultdict(lambda: defaultdict(set))
+    pages = defaultdict(set)
+    for name, membership_id, fact_id, fact in rows:
+        company = values[name]
+        for relation_id in (membership_id, fact_id):
+            pages[name].update(item["page"] for item in evidence.get(relation_id, []) if item["page"] is not None)
+        if fact:
+            company[fact["metric"]].add((fact["currency"], Decimal(fact["value"]) * UNIT_SCALE[fact["unit"]]))
+    missing = sorted(name for name, facts in values.items() if len(facts[rank_by]) != 1)
+    eligible = [(name, *next(iter(facts[rank_by]))) for name, facts in values.items() if len(facts[rank_by]) == 1]
+    currencies = {currency for _, currency, _ in eligible}
+    eligible.sort(key=lambda item: (-item[2], item[0]))
+    selected = eligible[:top_k]
+    evidence_pages = sorted({page for row in pages.values() for page in row})
+    result = {"scope": SUBSIDIARY_SCOPE, "full_group_coverage": False,
+              "disclosed_company_count": len(values), "rank_metric": rank_by, "sum_metric": sum_metric,
+              "requested_k": top_k, "missing_or_conflicting_rank_values": missing,
+              "evidence_pages": evidence_pages, "ranked": [], "aggregate": None}
+    if not rows or missing or len(currencies) != 1 or len(selected) < top_k:
+        return {**result, "status": "insufficient_comparable_disclosure"}
+    if len(eligible) > top_k and selected[-1][2] == eligible[top_k][2]:
+        return {**result, "status": "tie_at_cutoff"}
+    ranked = []
+    for name, currency, amount in selected:
+        sum_values = values[name][sum_metric]
+        sum_value = next(iter(sum_values))[1] if len(sum_values) == 1 and next(iter(sum_values))[0] == currency else None
+        ranked.append({"company": name, "rank_value": str(amount),
+                       "sum_value": str(sum_value) if sum_value is not None else None,
+                       "evidence_pages": sorted(pages[name])})
+    complete = all(row["sum_value"] is not None for row in ranked)
+    return {**result, "status": "ok" if complete else "missing_or_conflicting_sum_values",
+            "ranked": ranked, "currency": selected[0][1], "unit": "元",
+            "aggregate": str(sum(Decimal(row["sum_value"]) for row in ranked)) if complete else None}
 
 
 class FinancialGraph:
@@ -21,6 +63,7 @@ class FinancialGraph:
                 JOIN graph_entities f ON f.entity_id = r.object_entity_id
                 WHERE r.doc_id = %s AND r.predicate_family = 'has_financial_fact'
                   AND NOT r.is_aggregated AND f.attributes->>'year' = %s
+                  AND f.attributes->>'scope' = 'report_group'
                   AND f.attributes->>'metric' = ANY(%s)
                 ORDER BY f.attributes->>'metric', r.relation_id
             """, (self.doc_id, str(year), metrics))
@@ -29,6 +72,33 @@ class FinancialGraph:
         result = [{"subject": subject, **fact, "evidence": evidence.get(relation_id, [])}
                   for relation_id, subject, fact in rows]
         return {"facts": result, "missing_metrics": sorted(set(metrics) - {row["metric"] for row in result})}
+
+    def rank_subsidiaries(self, year, rank_by, sum_metric, top_k):
+        if type(year) is not int or type(top_k) is not int or not 1 <= top_k <= 20:
+            raise ValueError("Supply an annual fiscal year and a top_k from 1 to 20")
+        if rank_by not in SUBSIDIARY_METRICS.values() or sum_metric not in SUBSIDIARY_METRICS.values():
+            raise ValueError("Ranking and sum metrics must be revenue or net_profit")
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute("""
+                WITH facts AS (
+                    SELECT financial.subject_entity_id, financial.relation_id, fact.attributes
+                    FROM graph_relations financial
+                    JOIN graph_entities fact ON fact.entity_id = financial.object_entity_id
+                    WHERE financial.doc_id = %s AND financial.predicate_family = 'has_financial_fact'
+                      AND NOT financial.is_aggregated AND fact.attributes->>'scope' = %s
+                      AND fact.attributes->>'year' = %s AND fact.attributes->>'metric' = ANY(%s)
+                )
+                SELECT company.canonical_name, member.relation_id, facts.relation_id, facts.attributes
+                FROM graph_relations member
+                JOIN graph_entities company ON company.entity_id = member.object_entity_id
+                LEFT JOIN facts ON facts.subject_entity_id = company.entity_id
+                WHERE member.doc_id = %s AND member.predicate_family = 'has_subsidiary_financial_disclosure'
+                  AND NOT member.is_aggregated
+            """, (self.doc_id, SUBSIDIARY_SCOPE, str(year), [rank_by, sum_metric], self.doc_id))
+            rows = cur.fetchall()
+        ids = sorted({relation for row in rows for relation in row[1:3] if relation is not None})
+        return {"year": year, **rank_disclosure(rows, _load_evidence_map(ids), rank_by=rank_by,
+                                                sum_metric=sum_metric, top_k=top_k)}
 
     def subsidiaries(self, location_terms, location_basis, *, company_names=None):
         if location_basis not in {"registered_in", "operates_in"}:

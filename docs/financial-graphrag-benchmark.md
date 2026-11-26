@@ -8,19 +8,12 @@ for fixture tests.
 
 ## Work remaining
 
-- Extend graph extraction for typed ownership and locations, and numeric facts
-  with subject, period, currency, unit, scope, and page provenance. Keep report
-  extraction coverage and conflicts available for query-time decisions.
-- Add graph-only answer tools with typed traversal and exact aggregation.
-  Apply scope filters before counting or ranking. Use a separate benchmark
-  arm for any Search Tools fallback.
-- Label paired questions from multiple reports across direct lookup,
-  calculation, multi-hop, aggregation, and insufficient-disclosure cases.
-  Retain evidence pages and define acceptable units and error tolerances.
-  Hold out questions used for final evaluation from prompt tuning.
-- Run interleaved paired evaluations with JSONL tool traces. Report answer and
-  citation accuracy per question and category, and P50/P95 end-to-end times.
-  Account separately for extraction, embedding, query, and answer-stage costs.
+- Evaluate the page-faithful input with the same interleaved runner, then run
+  the separate holdout. It includes facts intentionally outside the graph
+  schema; do not extend the schema using those questions before evaluating it.
+- Expand real-world coverage beyond these two issuers and find a report that
+  discloses comparable data for at least five subsidiaries. Do not treat a
+  one-company ranking or an incomplete-top-five denial as that test.
 - Apply an explicit price table to recorded token usage and report unpriced
   requests separately. Report local resource use separately from API charges.
   Compare offline-plus-online cost at several query volumes. Report cost
@@ -42,8 +35,11 @@ Pass `--issuer`, `--fiscal-year`, and optionally `--currency` to
 `index_graph_report` for deterministic financial-table extraction. This mode
 keeps full page tables, emits typed group-level facts, reported subsidiary
 edges, and distinct registration and operating locations. Build records have
-zero extraction model calls. Coverage depends on recognized disclosures, and
-subsidiary profit rankings need additional subject-level metric extraction.
+zero extraction model calls. Version 2 adds year-specific subsidiary revenue
+and net profit for supported material non-wholly-owned subsidiary tables.
+Ranking selects companies first and sums a metric over the same cohort using
+decimal arithmetic. Insufficient K, conflicting or absent values, mixed
+currencies and cutoff ties are surfaced instead of making up a ranking.
 
 Use `scripts.chat_financial_graph` with the resulting graph ID for graph-only
 QA. It shares the Search Tools answer loop and round limit. The paired runner
@@ -52,6 +48,8 @@ categories and text. Supply the unchanged `c024721` checkout as the baseline.
 The scoring command uses the gold JSON from `data/benchmarks/`, evaluates
 number and citation presence separately, and requires one model across both
 arms. Pattern scores are a first pass and disputed cases need manual review.
+New runs capture the baseline/graph revisions and file digests in
+`experiment.json`; keep that file with the run JSON and JSONL traces.
 
 The development pilot ran one Midea cross-page R&D question with
 `qwen3.8-max-0902`. Both answers passed the number and citation check.
@@ -92,3 +90,29 @@ returns the Shangcai registration row on page 227 instead of page 224. The
 corrected graph builds took 0.29 and 0.91 seconds respectively, excluding
 initial PDF parsing; this confirms the locator correction, not QA accuracy
 across the entire corpus.
+
+### Frozen original-input development cohort
+
+The paired `qwen3.8-max-0902` runs used two reports and eight questions.
+
+| Arm | Answer correct | Joint correct | P50 s | P95 s | Mean input tokens | Mean output tokens |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Search Tools | 8/8 | 7/8 | 26.83 | 69.15 | 12,565 | 1,276 |
+| GraphRAG | 8/8 | 7/8 | 11.62 | 22.58 | 2,717 | 458 |
+
+Both evidence failures were the same wrong PDF page on the Muyuan
+registration lookup. Median end-to-end time on the two multi-hop questions
+was 19.29 versus 6.02 seconds; on the two cross-page calculations it was
+24.99 versus 14.64 seconds. These very small development strata establish
+observed differences, not reusable performance estimates.
+
+Using the public Beijing list rates and the cache-rate sensitivity above,
+the original cohort's mean model cost was RMB 0.1357–0.1967 for Search
+Tools and RMB 0.0476–0.0491 for the graph. The corresponding paired saving
+is RMB 0.0881–0.1476 per question. At exchangeable workload mix and
+quality, an incremental fixed graph deployment cost of RMB 1, 10, or 50
+would be recovered in 7–12, 68–114, or 339–568 queries respectively. Those
+fixed costs are scenarios, not measured labor or infrastructure bills. Both
+offline builders in the current experiment make zero paid model calls (BGE
+embeddings run locally). PDF extraction is shared, and cancels when taking
+the difference. Keep local cold build times separate from billed costs.

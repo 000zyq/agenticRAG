@@ -11,7 +11,11 @@ from app.ingest.financial_report import (
 )
 
 
-FINANCIAL_EXTRACTOR_VERSION = "financial_tables_v1"
+FINANCIAL_EXTRACTOR_VERSION = "financial_tables_v2"
+SUBSIDIARY_SCOPE = "material_non_wholly_owned"
+SUBSIDIARY_METRICS = {"营业收入": "revenue", "净利润": "net_profit"}
+SUBSIDIARY_SECTION = re.compile(r"(?:重要|重大)(?:的)?非全资子公司的主要财务信息")
+EXPLICIT_UNIT = re.compile(r"单位:(?:人民币)?(亿元|万元|千元|元)$")
 YEAR = re.compile(r"(20\d{2})\s*年(?:度)?(?:\s*\([^)]*\))?")
 MONEY = re.compile(r"(?:人民币)?(亿元|万元|千元|元)")
 NUMBER = re.compile(r"-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?")
@@ -75,6 +79,42 @@ class FinancialExtractor:
             relations.append({"subject": subject, "predicate": predicate, "object": obj, "confidence": 1.0,
                               "evidence_text": " | ".join(row)})
 
+        def fact(subject, metric, row, year, unit, value, scope, label):
+            attrs = {"metric": metric, "label": label, "year": year, "unit": unit,
+                     "currency": self.currency if unit in {"亿元", "万元", "千元", "元"} else None,
+                     "scope": scope, "value": value,
+                     "period_kind": "year_end" if metric == "employee_count" else "fiscal_year"}
+            identity = [subject, scope, metric, year, unit, value]
+            key = "fact_" + sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
+            entity(key, "financial_fact", attrs)
+            edge(subject, "has_financial_fact", key, row)
+
+        def subsidiary_financials(rows, plain_prefix):
+            match = EXPLICIT_UNIT.search(plain_prefix)
+            if not match or not SUBSIDIARY_SECTION.search(plain_prefix[-450:]):
+                return
+            unit = match[1]
+            relative_years = {"本期发生额": self.fiscal_year, "上期发生额": self.fiscal_year - 1}
+            for header_idx, (first, second) in enumerate(zip(rows[:6], rows[1:7]), start=1):
+                if not first or not second or clean(second[0]) != "子公司名称":
+                    continue
+                cols = [(col, SUBSIDIARY_METRICS[clean(label)], relative_years[clean(period)], label)
+                        for col, (period, label) in enumerate(zip(first, second))
+                        if clean(period) in relative_years and clean(label) in SUBSIDIARY_METRICS]
+                if not cols:
+                    continue
+                for row in rows[header_idx + 1:]:
+                    name = row[0].strip()
+                    if not name or clean(name) in {"合计", "子公司名称", "小计", "不适用", "-", "—"}:
+                        continue
+                    entity(name, "financial_company")
+                    edge(self.issuer, "has_subsidiary_financial_disclosure", name, row)
+                    for col, metric, year, label in cols:
+                        value = value_from_cell(row[col], unit) if col < len(row) else None
+                        if value is not None:
+                            fact(name, metric, row, year, unit, value, SUBSIDIARY_SCOPE, label)
+                return
+
         def subsidiaries(rows):
             for idx, header in enumerate(rows[:8]):
                 columns = {clean(value): col for col, value in enumerate(header)}
@@ -97,11 +137,16 @@ class FinancialExtractor:
                 break
 
         entity(self.issuer, "financial_company")
+        previous_end = 0
+        plain_prefix = ""
         for table in HTML_TABLE_RE.finditer(text):
+            plain_prefix = (plain_prefix + clean(text[previous_end:table.start()]))[-450:]
+            previous_end = table.end()
             rows = table_rows(table[0])
             if not rows:
                 continue
             subsidiaries(rows)
+            subsidiary_financials(rows, plain_prefix)
             years = {}
             labels = {METRICS.get(metric_label(row[0])) for row in rows if row}
             context = clean(text[max(0, table.start() - 160):table.start()])
@@ -125,13 +170,6 @@ class FinancialExtractor:
                     value = value_from_cell(row[col], unit) if col < len(row) else None
                     if value is None:
                         continue
-                    attrs = {"metric": metric, "label": row[0], "year": year, "unit": unit,
-                             "currency": self.currency if unit in {"亿元", "万元", "千元", "元"} else None,
-                             "scope": "report_group", "value": value,
-                             "period_kind": "year_end" if metric == "employee_count" else "fiscal_year"}
-                    identity = [self.issuer, metric, year, unit, value]
-                    fact = "fact_" + sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
-                    entity(fact, "financial_fact", attrs)
-                    edge(self.issuer, "has_financial_fact", fact, row)
+                    fact(self.issuer, metric, row, year, unit, value, "report_group", row[0])
         return {"entities": list(entities.values()) if relations else [], "relations": relations,
                 "extraction_mode": "financial_rules"}

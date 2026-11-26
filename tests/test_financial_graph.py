@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from app.graph.canonicalize import canonicalize_chunk_graphs
 from app.graph.financial import FinancialExtractor
+from app.graph.financial_query import rank_disclosure
 
 
 def test_financial_graph_separates_periods_and_legal_location_types():
@@ -33,3 +36,35 @@ def test_typed_extractor_does_not_guess_a_period_for_revenue():
     html = "<table><tr><td>营业收入（千元）</td><td>100</td></tr>" \
            "<tr><td>归属于上市公司股东的净利润（千元）</td><td>10</td></tr></table>"
     assert FinancialExtractor("甲股份有限公司", 2024, "CNY")(html)["relations"] == []
+
+
+def test_subsidiary_metrics_require_scope_and_separate_annual_periods():
+    extract = FinancialExtractor("甲股份有限公司", 2024, "CNY")
+    text = Path(__file__).with_name("fixtures").joinpath("subsidiary_financials.md").read_text(encoding="utf-8")
+    graph = extract(text)
+    facts = {row["name"]: row["attributes"] for row in graph["entities"] if row["type"] == "financial_fact"}
+    assert len(facts) == 8
+    assert {f["scope"] for f in facts.values()} == {"material_non_wholly_owned"}
+    assert {(f["year"], f["value"]) for edge in graph["relations"] if edge["subject"] == "甲子公司"
+            if (f := facts[edge["object"]])["metric"] == "net_profit"} == {(2024, "8"), (2023, "3")}
+    assert not extract(text.replace("重要非全资子公司的主要财务信息", "其他信息"))["relations"]
+
+
+def test_rank_selects_by_revenue_sums_same_companies_and_refuses_incomplete_rank():
+    data = [
+        ("甲", "a", "a1", {"metric": "revenue", "value": "300", "unit": "千元", "currency": "CNY"}),
+        ("甲", "a", "a2", {"metric": "net_profit", "value": "8", "unit": "元", "currency": "CNY"}),
+        ("乙", "b", "b1", {"metric": "revenue", "value": "20", "unit": "万元", "currency": "CNY"}),
+        ("乙", "b", "b2", {"metric": "net_profit", "value": "40", "unit": "元", "currency": "CNY"}),
+    ]
+    evidence = {"a": [{"page": 1}], "b": [{"page": 2}]}
+    args = {"rank_by": "revenue", "sum_metric": "net_profit"}
+    result = rank_disclosure(data, evidence, top_k=1, **args)
+    assert result["status"] == "ok" and result["aggregate"] == "8"
+    assert result["ranked"][0]["company"] == "甲" and not result["full_group_coverage"]
+    assert rank_disclosure(data, evidence, top_k=2, **args)["aggregate"] == "48"
+    assert rank_disclosure(data, evidence, top_k=3, **args)["aggregate"] is None
+    assert rank_disclosure(data[1:], evidence, top_k=1, **args)["status"] == "insufficient_comparable_disclosure"
+    tied = {**data[2][3], "value": "30"}
+    data[2] = (*data[2][:3], tied)
+    assert rank_disclosure(data, evidence, top_k=1, **args)["status"] == "tie_at_cutoff"

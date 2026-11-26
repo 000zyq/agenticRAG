@@ -164,3 +164,29 @@ def test_markdown_report_build_reuses_graph_and_keeps_source_page(monkeypatch, t
         assert graph["edges"][0]["evidence"][0]["page"] == 12
     finally:
         _cleanup_doc(built["doc_id"])
+
+
+@pytest.mark.integration
+def test_financial_rank_roundtrip_isolates_scope_period_and_evidence(monkeypatch, tmp_path):
+    if os.getenv("RUN_DB_TESTS") != "1" or not os.getenv("POSTGRES_DSN"):
+        pytest.skip("PostgreSQL integration tests are disabled")
+
+    from app.graph.financial_query import FinancialGraph
+    from app.ingest.financial_report import PageContent
+    from scripts import index_graph_report
+    issuer = "例子股份有限公司" + tmp_path.name
+    text = Path(__file__).with_name("fixtures").joinpath("subsidiary_financials.md").read_text(encoding="utf-8")
+    monkeypatch.setattr(index_graph_report, "extract_pdf_to_markdown",
+                        lambda *_: ([PageContent(page=71, text_md=text, text_raw=text)], "mineru"))
+    built = index_graph_report.index_report(tmp_path / "source.pdf", "mineru", issuer=issuer, fiscal_year=2024)
+    try:
+        graph = FinancialGraph(built["doc_id"])
+        latest = graph.rank_subsidiaries(2024, "revenue", "net_profit", 1)
+        previous = graph.rank_subsidiaries(2023, "revenue", "net_profit", 1)
+        assert latest["ranked"][0]["company"] == "甲子公司"
+        assert latest["evidence_pages"] == [71] and latest["aggregate"] == "80000"
+        assert previous["ranked"][0]["company"] == "乙子公司" and previous["aggregate"] == "40000"
+        assert not graph.facts(["revenue"], 2024)["facts"]
+        assert graph.rank_subsidiaries(2024, "revenue", "net_profit", 3)["aggregate"] is None
+    finally:
+        _cleanup_doc(built["doc_id"])

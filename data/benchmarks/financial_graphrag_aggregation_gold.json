@@ -1,0 +1,45 @@
+{
+  "questions": [
+    {
+      "id": "midea-wuhu-major-count",
+      "report": "midea",
+      "category": "aggregation",
+      "question": "只统计年报财务报表附注的主要子公司构成表（含续表），注册地为芜湖市的公司有几家？请引用两页表格。",
+      "slots": [{"id": "count", "any_of": ["(?:^|[^0-9])6\\s*家", "六家"]}],
+      "evidence": [["第\\s*265\\s*页", "\\bp\\.?\\s*265\\b"], ["第\\s*266\\s*页", "\\bp\\.?\\s*266\\b"]]
+    },
+    {
+      "id": "muyuan-disclosed-revenue-leader-profit",
+      "report": "muyuan",
+      "category": "aggregation",
+      "question": "仅在年报“重要非全资子公司的主要财务信息”表披露范围内，按2024年营业收入排序，第一名是哪家？该公司的净利润是多少元？",
+      "slots": [
+        {"id": "company", "any_of": ["南阳市牧华畜牧产业发展有限公司"]},
+        {"id": "net_profit", "any_of": ["(?<!\\d)799314732\\.02\\s*元"]}
+      ],
+      "evidence": [["第\\s*237\\s*页", "\\bp\\.?\\s*237\\b"]]
+    },
+    {
+      "id": "muyuan-disclosed-profit-leader-city",
+      "report": "muyuan",
+      "category": "multi_hop",
+      "question": "只考虑年报“重要非全资子公司的主要财务信息”披露的公司，2024年净利润最高的公司叫什么，它在哪个城市注册？分别给出财务表和注册地表的出处。",
+      "slots": [
+        {"id": "company", "any_of": ["南阳市牧华畜牧产业发展有限公司"]},
+        {"id": "registered_city", "any_of": ["注册(?:地|于)[^。\\n]{0,35}南阳(?:市)?", "河南省南阳市"]}
+      ],
+      "evidence": [["第\\s*237\\s*页", "\\bp\\.?\\s*237\\b"], ["第\\s*229\\s*页", "\\bp\\.?\\s*229\\b"]]
+    },
+    {
+      "id": "muyuan-disclosed-top-five-unavailable",
+      "report": "muyuan",
+      "category": "insufficient_coverage",
+      "question": "仅用牧原年报“重要非全资子公司的主要财务信息”表，能不能算出2024年营业收入前五家子公司的净利润合计？请说明理由和出处。",
+      "slots": [
+        {"id": "unavailable", "any_of": ["不能", "无法", "不足", "不够", "不具备"]},
+        {"id": "one_company", "any_of": ["(?:仅|只)[^。\\n]{0,24}(?:1|一)\\s*(?:家|个|条)", "南阳市牧华畜牧产业发展有限公司"]}
+      ],
+      "evidence": [["第\\s*237\\s*页", "\\bp\\.?\\s*237\\b"]]
+    }
+  ]
+}

@@ -29,16 +29,24 @@ def graph_ask(question, doc_id, complete, *, trace=None):
             "company_names": {"type": "array", "items": STRING},
             "location_basis": {"type": "string", "enum": ["registered_in", "operates_in"]},
         }),
+        tool("rank_subsidiaries", "Rank the disclosed material non-wholly-owned subsidiaries by annual "
+             "revenue or net profit and sum one metric over the selected companies. Never represents all "
+             "group subsidiaries. Missing values, insufficient K and cutoff ties are reported.", {
+            "year": {"type": "integer"}, "top_k": {"type": "integer", "minimum": 1, "maximum": 20},
+            "rank_by": {"type": "string", "enum": ["revenue", "net_profit"]},
+            "sum_metric": {"type": "string", "enum": ["revenue", "net_profit"]},
+        }),
     ]
     guidance = (
         "Query the report graph for typed evidence. Batch requested facts. Ask for all inputs of derived metrics. "
         "For subsidiary counts, identify the location basis and include known literal geographic variants. "
         "A count describes only the declared tool scope. Report incomplete coverage and conflicting factual "
-        "observations, and do not infer a location from a company name alone."
+        "observations, and do not infer a location from a company name alone. Use rank_subsidiaries for "
+        "financial rankings or sums; if the user asks about all subsidiaries, never generalize from this subset."
     )
     return ask(question, None, complete, trace=trace, toolset=(
         tools, {"financial_facts": graph.facts, "reported_subsidiaries": graph.subsidiaries,
-                "company_locations": graph.company_locations}, guidance,
+                "company_locations": graph.company_locations, "rank_subsidiaries": graph.rank_subsidiaries}, guidance,
     ))
 
 

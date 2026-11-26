@@ -1,0 +1,112 @@
+{
+  "questions": [
+    {
+      "id": "midea-2023-revenue",
+      "report": "midea",
+      "category": "direct",
+      "question": "根据2024年年报的主要会计数据表，美的集团2023年的营业收入是多少千元？请引原页。",
+      "slots": [{"id": "revenue", "any_of": ["(?<!\\d)372037280(?![\\d.])\\s*千元"]}],
+      "evidence": [["第\\s*9\\s*页", "\\bp\\.?\\s*9\\b"]]
+    },
+    {
+      "id": "muyuan-2022-revenue",
+      "report": "muyuan",
+      "category": "direct",
+      "question": "按照这份2024年报主要会计数据表的比较数字，牧原2022年度营业收入是多少元？请引原页。",
+      "slots": [{"id": "revenue", "any_of": ["(?<!\\d)124826212177\\.74\\s*元"]}],
+      "evidence": [["第\\s*9\\s*页", "\\bp\\.?\\s*9\\b"]]
+    },
+    {
+      "id": "muyuan-2023-rd-share",
+      "report": "muyuan",
+      "category": "direct",
+      "question": "按这份年报，牧原2023年度研发投入占营业收入的比例是多少？请给页码。",
+      "slots": [{"id": "share", "any_of": ["(?<![\\d.])1\\.50?\\s*%"]}],
+      "evidence": [["第\\s*29\\s*页", "\\bp\\.?\\s*29\\b"]]
+    },
+    {
+      "id": "midea-rd-spend-per-researcher",
+      "report": "midea",
+      "category": "calculation",
+      "question": "按美的年报的研发投入表和研发人员表，2024年研发投入金额除以当年研发人员数，是多少万元/人？保留两位小数，注明两张表的页码。",
+      "slots": [{"id": "amount", "any_of": ["(?<![\\d.])68\\.51\\s*万元\\s*(?:/|每)\\s*人"]}],
+      "evidence": [["第\\s*52\\s*页", "\\bp\\.?\\s*52\\b"], ["第\\s*53\\s*页", "\\bp\\.?\\s*53\\b"]]
+    },
+    {
+      "id": "muyuan-rd-spend-per-researcher",
+      "report": "muyuan",
+      "category": "calculation",
+      "question": "按牧原年报的研发投入表和研发人员表，2024年研发投入金额除以当年研发人员数，是多少万元/人？保留两位小数，注明两张表的页码。",
+      "slots": [{"id": "amount", "any_of": ["(?<![\\d.])26\\.94\\s*万元\\s*(?:/|每)\\s*人"]}],
+      "evidence": [["第\\s*28\\s*页", "\\bp\\.?\\s*28\\b"], ["第\\s*29\\s*页", "\\bp\\.?\\s*29\\b"]]
+    },
+    {
+      "id": "midea-holding-status-longtail",
+      "report": "midea",
+      "category": "outside_schema",
+      "question": "根据美的年报主要子公司表，美的对安得智联供应链科技有限公司的持股比例是多少，是直接还是间接？请引用表格出处。",
+      "slots": [
+        {"id": "holding", "any_of": ["(?<!\\d)74(?:\\.0+)?\\s*%"]},
+        {"id": "indirect", "any_of": ["间接"]}
+      ],
+      "evidence": [["第\\s*266\\s*页", "\\bp\\.?\\s*266\\b"]]
+    },
+    {
+      "id": "midea-cashflow-longtail",
+      "report": "midea",
+      "category": "outside_schema",
+      "question": "2024年美的集团经营活动产生的现金流量净额是多少千元？用主要会计数据或现金流量分析表作证。",
+      "slots": [{"id": "amount", "any_of": ["(?<!\\d)60511572(?![\\d.])\\s*千元"]}],
+      "evidence": [["第\\s*(?:9|53)\\s*页", "\\bp\\.?\\s*(?:9|53)\\b"]]
+    },
+    {
+      "id": "muyuan-capitalized-rd-longtail",
+      "report": "muyuan",
+      "category": "outside_schema",
+      "question": "牧原2024年度资本化研发投入占研发投入的比例是多少？请引用研发投入表，并区分研发投入占营业收入的比例。",
+      "slots": [{"id": "share", "any_of": ["(?<![\\d.])0(?:\\.00)?\\s*%"]}],
+      "evidence": [["第\\s*29\\s*页", "\\bp\\.?\\s*29\\b"]]
+    },
+    {
+      "id": "midea-parent-staff-longtail",
+      "report": "midea",
+      "category": "outside_schema",
+      "question": "美的集团2024年报报告期末母公司在职员工人数是多少？不要使用母子公司合计数，请引原页。",
+      "slots": [{"id": "employees", "any_of": ["(?<!\\d)947\\s*(?:人|名)"]}],
+      "evidence": [["第\\s*82\\s*页", "\\bp\\.?\\s*82\\b"]]
+    },
+    {
+      "id": "muyuan-fugou-company-location",
+      "report": "muyuan",
+      "category": "multi_hop",
+      "question": "按牧原年报企业集团构成表，扶沟牧华畜牧产业发展有限公司的注册地和主要经营地分别是哪里？请引原页。",
+      "slots": [
+        {"id": "registration", "any_of": ["注册地[^。；\\n]{0,24}(?:河南省)?扶沟县"]},
+        {"id": "operations", "any_of": ["(?:主要)?经营地[^。；\\n]{0,24}(?:河南省)?扶沟县", "均(?:为|在)[^。；\\n]{0,16}扶沟县"]}
+      ],
+      "evidence": [["第\\s*229\\s*页", "\\bp\\.?\\s*229\\b"]]
+    },
+    {
+      "id": "muyuan-covered-prior-profit",
+      "report": "muyuan",
+      "category": "aggregation",
+      "question": "仅对牧原年报重要非全资子公司的主要财务信息表中披露的公司，按2023年营业收入选第一名，报告该公司2023年的净利润（元）并给出出处。",
+      "slots": [
+        {"id": "company", "any_of": ["南阳市牧华畜牧产业发展有限公司"]},
+        {"id": "amount", "any_of": ["(?<!\\d)223535865\\.03\\s*元"]}
+      ],
+      "evidence": [["第\\s*237\\s*页", "\\bp\\.?\\s*237\\b"]]
+    },
+    {
+      "id": "muyuan-whole-group-rank-unavailable",
+      "report": "muyuan",
+      "category": "insufficient_coverage",
+      "question": "能不能仅凭牧原年报的重要非全资子公司主要财务信息表，认定净利润最高的那家公司也是全集团所有子公司中净利润最高的？为什么？请给出处。",
+      "slots": [
+        {"id": "unavailable", "any_of": ["不能", "无法", "不足以"]},
+        {"id": "subset", "any_of": ["仅[^。\\n]{0,25}(?:重要|一家|1家)", "并非[^。\\n]{0,15}(?:全部|完整|所有|全集团)", "不(?:涵盖|覆盖|代表)[^。\\n]{0,18}(?:全部|所有|全集团|全量)"]}
+      ],
+      "evidence": [["第\\s*237\\s*页", "\\bp\\.?\\s*237\\b"]]
+    }
+  ]
+}
