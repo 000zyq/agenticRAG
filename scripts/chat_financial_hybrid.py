@@ -183,6 +183,10 @@ def hybrid_ask(question, graph, report_year, complete, search, record):
                                 response_format={"type": "json_object"})
         except Exception as exc:
             record("unreported_route_call", error_type=type(exc).__name__)
+            if getattr(exc, "code", None) == "insufficient_quota":
+                record("route", selected="unavailable", reason="insufficient_quota",
+                       duration_ms=round((perf_counter() - start) * 1000))
+                raise RuntimeError("insufficient_quota: the shared model cannot answer or fall back") from None
             reason = "planner_error"
         else:
             usage = getattr(response, "usage", None)

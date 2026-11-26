@@ -1,0 +1,389 @@
+{
+  "holdout": {
+    "attempted": 12,
+    "completed": 12,
+    "quota_rejected_question_ids": [],
+    "local_artifacts": "page-faithful/hybrid-holdout-qwen",
+    "hybrid_runs_sha256": "682fccd72dac1424b979dfe92c34ff105c97cda6e526ce2bb6d028bed99dcb3c",
+    "control_runs_sha256": "441d255b9d7d37eb3d78687fbe50921259df91c767d4df8404b8e9b74cf50db4",
+    "experiment": {
+      "model": "qwen3.8-max-0902",
+      "baseline_commit": "c02472121f6f79ecef690a8120bac5cc16ff0abe",
+      "graph_commit": "daf9b8389b460f1ddc5076f49099f67545acef33",
+      "graph_tracked_patch_sha256": "d4c9ef5ae3b688acc7690f413552ba0f0a9ac5474c3e9234ff26d87c7c1d87e3",
+      "manifest_sha256": "13eefdd75a14ad783f58c4b874fb79ce98a24e59e49a7f99514b09157e7b46b7",
+      "reports": {
+        "midea": {
+          "pdf_sha256": "b17a9b9b84bca1d2a4e4a3cadc5dd5ba5c85e3f1fd2d758acd3315b5b040ecd9",
+          "content_list_sha256": "e2dc66560b8f61d8ef7f0e76cae5b237ddeb71b0cfbddd2f20b11bb477be23a1",
+          "graph_doc_id": "ab0845c96ac15be5aa7d57bd3be2c7c9bde8b4403e90bfb85f023d2446fb06d5"
+        },
+        "muyuan": {
+          "pdf_sha256": "b26c4441b34feef43d1124e6372fb858c8455f6851b19f31504a10fdc6ba4de5",
+          "content_list_sha256": "9369f51f085f72b7cbb8155bc2a8f02a3bca898d0fccaf3d17283b66cfc89d97",
+          "graph_doc_id": "be08c7d1bc2ab49dac53760d58b50c6ec6f5606828be76299f02a4353aabf8fa"
+        }
+      },
+      "timeout_seconds": 180,
+      "arms": [
+        "hybrid"
+      ]
+    },
+    "model": "qwen3.8-max-0902",
+    "currency": "CNY",
+    "selections": {
+      "graphrag": 6,
+      "search_tools": 6
+    },
+    "reasons": {
+      "verified_evidence": 6,
+      "planner_error": 1,
+      "unsupported_scope_period_or_metric": 5
+    },
+    "unreported_hybrid_calls": 1,
+    "p50_route_ms": 10740.5,
+    "p50_route_ms_when_model_used": 19706,
+    "p50_verified_graph_evidence_ms": 45.5,
+    "p50_fallback_ms_conditional": 20850.5,
+    "comparison_scenarios": [
+      {
+        "cached_input_per_million": 0,
+        "mean_hybrid_known_cost_by_stage": {
+          "router": "0.014927",
+          "search_fallback": "0.050191"
+        },
+        "mean_hybrid_known_cost_lower_bound": "0.065118",
+        "priced_pairs": {
+          "n": 11,
+          "mean_cost": {
+            "search_tools": "0.1039756363636363636363636364",
+            "graphrag": "0.04007345454545454545454545455",
+            "hybrid": "0.064404"
+          }
+        },
+        "overall": {
+          "search_tools": {
+            "n": 12,
+            "failed": 0,
+            "answer_correct": 12,
+            "citation_correct": 12,
+            "joint_correct": 12,
+            "reviewed": 1,
+            "p50_seconds": 19.054507895489223,
+            "p95_seconds": 51.02384879102465,
+            "mean_input_tokens": 11349.583333333334,
+            "mean_output_tokens": 823.5833333333334,
+            "p50_model_seconds": 17.842,
+            "mean_api_cost": "0.102868",
+            "cost_per_joint_correct": "0.102868"
+          },
+          "graphrag": {
+            "n": 12,
+            "failed": 0,
+            "answer_correct": 7,
+            "citation_correct": 8,
+            "joint_correct": 7,
+            "reviewed": 5,
+            "p50_seconds": 13.903242228960153,
+            "p95_seconds": 51.385093249962665,
+            "mean_input_tokens": 3486.8333333333335,
+            "mean_output_tokens": 706.9166666666666,
+            "p50_model_seconds": 13.218499999999999,
+            "mean_api_cost": "0.040411",
+            "cost_per_joint_correct": "0.069276"
+          },
+          "hybrid": {
+            "n": 12,
+            "failed": 0,
+            "answer_correct": 12,
+            "citation_correct": 12,
+            "joint_correct": 12,
+            "reviewed": 1,
+            "p50_seconds": 19.057268020522315,
+            "p95_seconds": 69.92320066597313,
+            "mean_input_tokens": 5019.666666666667,
+            "mean_output_tokens": 821.8333333333334,
+            "p50_model_seconds": 18.117,
+            "mean_api_cost": null,
+            "cost_per_joint_correct": null
+          }
+        }
+      },
+      {
+        "cached_input_per_million": 12,
+        "mean_hybrid_known_cost_by_stage": {
+          "router": "0.014927",
+          "search_fallback": "0.074895"
+        },
+        "mean_hybrid_known_cost_lower_bound": "0.089822",
+        "priced_pairs": {
+          "n": 11,
+          "mean_cost": {
+            "search_tools": "0.1680687272727272727272727273",
+            "graphrag": "0.06716290909090909090909090909",
+            "hybrid": "0.09023672727272727272727272727"
+          }
+        },
+        "overall": {
+          "search_tools": {
+            "n": 12,
+            "failed": 0,
+            "answer_correct": 12,
+            "citation_correct": 12,
+            "joint_correct": 12,
+            "reviewed": 1,
+            "p50_seconds": 19.054507895489223,
+            "p95_seconds": 51.02384879102465,
+            "mean_input_tokens": 11349.583333333334,
+            "mean_output_tokens": 823.5833333333334,
+            "p50_model_seconds": 17.842,
+            "mean_api_cost": "0.165844",
+            "cost_per_joint_correct": "0.165844"
+          },
+          "graphrag": {
+            "n": 12,
+            "failed": 0,
+            "answer_correct": 7,
+            "citation_correct": 8,
+            "joint_correct": 7,
+            "reviewed": 5,
+            "p50_seconds": 13.903242228960153,
+            "p95_seconds": 51.385093249962665,
+            "mean_input_tokens": 3486.8333333333335,
+            "mean_output_tokens": 706.9166666666666,
+            "p50_model_seconds": 13.218499999999999,
+            "mean_api_cost": "0.067291",
+            "cost_per_joint_correct": "0.115356"
+          },
+          "hybrid": {
+            "n": 12,
+            "failed": 0,
+            "answer_correct": 12,
+            "citation_correct": 12,
+            "joint_correct": 12,
+            "reviewed": 1,
+            "p50_seconds": 19.057268020522315,
+            "p95_seconds": 69.92320066597313,
+            "mean_input_tokens": 5019.666666666667,
+            "mean_output_tokens": 821.8333333333334,
+            "p50_model_seconds": 18.117,
+            "mean_api_cost": null,
+            "cost_per_joint_correct": null
+          }
+        }
+      }
+    ]
+  },
+  "development": {
+    "attempted": 12,
+    "completed": 4,
+    "quota_rejected_question_ids": [
+      "midea-ande-place",
+      "muyuan-shangcai-place",
+      "midea-disclosure-count",
+      "muyuan-rd-combo",
+      "midea-wuhu-major-count",
+      "muyuan-disclosed-revenue-leader-profit",
+      "muyuan-disclosed-profit-leader-city",
+      "muyuan-disclosed-top-five-unavailable"
+    ],
+    "local_artifacts": "page-faithful/hybrid-development-qwen",
+    "hybrid_runs_sha256": "942ee6583d9b11426cbe18de80d8cc1f948ee5077fa85ca29c9afa060ab9522a",
+    "control_runs_sha256": "c97477849160cf10778435efac88b25344df2affb8ee20124cfac2e1e317b7a3",
+    "experiment": {
+      "model": "qwen3.8-max-0902",
+      "baseline_commit": "c02472121f6f79ecef690a8120bac5cc16ff0abe",
+      "graph_commit": "317e917c6773ff6e65eab5da9b4b3b99bff33aaf",
+      "graph_tracked_patch_sha256": "8613bf3ce8312f6a793b5ae3a57b1075b92c2f9348caa5c1acb57df44b6b57bc",
+      "manifest_sha256": "8a0b76099ca04adce455814ac312ba0a29ceb09e1cf201041324010e025f833b",
+      "reports": {
+        "midea": {
+          "pdf_sha256": "b17a9b9b84bca1d2a4e4a3cadc5dd5ba5c85e3f1fd2d758acd3315b5b040ecd9",
+          "content_list_sha256": "e2dc66560b8f61d8ef7f0e76cae5b237ddeb71b0cfbddd2f20b11bb477be23a1",
+          "graph_doc_id": "ab0845c96ac15be5aa7d57bd3be2c7c9bde8b4403e90bfb85f023d2446fb06d5"
+        },
+        "muyuan": {
+          "pdf_sha256": "b26c4441b34feef43d1124e6372fb858c8455f6851b19f31504a10fdc6ba4de5",
+          "content_list_sha256": "9369f51f085f72b7cbb8155bc2a8f02a3bca898d0fccaf3d17283b66cfc89d97",
+          "graph_doc_id": "be08c7d1bc2ab49dac53760d58b50c6ec6f5606828be76299f02a4353aabf8fa"
+        }
+      },
+      "timeout_seconds": 180,
+      "arms": [
+        "hybrid"
+      ]
+    },
+    "model": "qwen3.8-max-0902",
+    "currency": "CNY",
+    "selections": {
+      "graphrag": 4
+    },
+    "reasons": {
+      "verified_evidence": 4
+    },
+    "unreported_hybrid_calls": 0,
+    "p50_route_ms": 17845.5,
+    "p50_route_ms_when_model_used": 17845.5,
+    "p50_verified_graph_evidence_ms": 32.0,
+    "p50_fallback_ms_conditional": null,
+    "comparison_scenarios": [
+      {
+        "cached_input_per_million": 0,
+        "mean_hybrid_known_cost_by_stage": {
+          "router": "0.026217",
+          "search_fallback": "0"
+        },
+        "mean_hybrid_known_cost_lower_bound": "0.026217",
+        "priced_pairs": {
+          "n": 4,
+          "mean_cost": {
+            "search_tools": "0.068574",
+            "graphrag": "0.022743",
+            "hybrid": "0.026217"
+          }
+        },
+        "overall": {
+          "search_tools": {
+            "n": 4,
+            "failed": 0,
+            "answer_correct": 4,
+            "citation_correct": 4,
+            "joint_correct": 4,
+            "reviewed": 0,
+            "p50_seconds": 20.78934466704959,
+            "p95_seconds": 23.626757208025083,
+            "mean_input_tokens": 7842.5,
+            "mean_output_tokens": 752,
+            "p50_model_seconds": 19.7175,
+            "mean_api_cost": "0.068574",
+            "cost_per_joint_correct": "0.068574"
+          },
+          "graphrag": {
+            "n": 4,
+            "failed": 0,
+            "answer_correct": 3,
+            "citation_correct": 4,
+            "joint_correct": 3,
+            "reviewed": 1,
+            "p50_seconds": 10.827954396023415,
+            "p95_seconds": 14.956893041962758,
+            "mean_input_tokens": 2690,
+            "mean_output_tokens": 417.75,
+            "p50_model_seconds": 10.2055,
+            "mean_api_cost": "0.022743",
+            "cost_per_joint_correct": "0.030324"
+          },
+          "hybrid": {
+            "n": 4,
+            "failed": 0,
+            "answer_correct": 4,
+            "citation_correct": 4,
+            "joint_correct": 4,
+            "reviewed": 0,
+            "p50_seconds": 18.242865292006172,
+            "p95_seconds": 20.660815167007968,
+            "mean_input_tokens": 520.5,
+            "mean_output_tokens": 554.75,
+            "p50_model_seconds": 17.814,
+            "mean_api_cost": "0.026217",
+            "cost_per_joint_correct": "0.026217"
+          }
+        }
+      },
+      {
+        "cached_input_per_million": 12,
+        "mean_hybrid_known_cost_by_stage": {
+          "router": "0.026217",
+          "search_fallback": "0"
+        },
+        "mean_hybrid_known_cost_lower_bound": "0.026217",
+        "priced_pairs": {
+          "n": 4,
+          "mean_cost": {
+            "search_tools": "0.121182",
+            "graphrag": "0.047319",
+            "hybrid": "0.026217"
+          }
+        },
+        "overall": {
+          "search_tools": {
+            "n": 4,
+            "failed": 0,
+            "answer_correct": 4,
+            "citation_correct": 4,
+            "joint_correct": 4,
+            "reviewed": 0,
+            "p50_seconds": 20.78934466704959,
+            "p95_seconds": 23.626757208025083,
+            "mean_input_tokens": 7842.5,
+            "mean_output_tokens": 752,
+            "p50_model_seconds": 19.7175,
+            "mean_api_cost": "0.121182",
+            "cost_per_joint_correct": "0.121182"
+          },
+          "graphrag": {
+            "n": 4,
+            "failed": 0,
+            "answer_correct": 3,
+            "citation_correct": 4,
+            "joint_correct": 3,
+            "reviewed": 1,
+            "p50_seconds": 10.827954396023415,
+            "p95_seconds": 14.956893041962758,
+            "mean_input_tokens": 2690,
+            "mean_output_tokens": 417.75,
+            "p50_model_seconds": 10.2055,
+            "mean_api_cost": "0.047319",
+            "cost_per_joint_correct": "0.063092"
+          },
+          "hybrid": {
+            "n": 4,
+            "failed": 0,
+            "answer_correct": 4,
+            "citation_correct": 4,
+            "joint_correct": 4,
+            "reviewed": 0,
+            "p50_seconds": 18.242865292006172,
+            "p95_seconds": 20.660815167007968,
+            "mean_input_tokens": 520.5,
+            "mean_output_tokens": 554.75,
+            "p50_model_seconds": 17.814,
+            "mean_api_cost": "0.026217",
+            "cost_per_joint_correct": "0.026217"
+          }
+        }
+      }
+    ]
+  },
+  "native_topk": {
+    "attempted": 4,
+    "completed": 0,
+    "quota_rejected_question_ids": [
+      "lianchuang-top-five-by-revenue",
+      "lianchuang-top-three-profit",
+      "lianchuang-profit-leader-registration",
+      "lianchuang-top-six-unavailable"
+    ],
+    "local_artifacts": "lianchuang-native/hybrid-questions-qwen",
+    "hybrid_runs_sha256": "647d0c413571b95e0ee1ff14e2b6fb8d1b81e72a31ec37797e7f88be53d11840",
+    "control_runs_sha256": "4063241bf321f70240e8ad131b2b636e9b072bfd4cd0ae41ea4eb66f73d20575",
+    "experiment": {
+      "model": "qwen3.8-max-0902",
+      "baseline_commit": "c02472121f6f79ecef690a8120bac5cc16ff0abe",
+      "graph_commit": "317e917c6773ff6e65eab5da9b4b3b99bff33aaf",
+      "graph_tracked_patch_sha256": "acac4d484ace85d60242b6be3bfc141d1256fe8289087c522b2c6edc3f22bfce",
+      "manifest_sha256": "0ff2c860eee77d9ba1edd381b46d086179fa66f913cca14b41ac8b4c43a07fe9",
+      "reports": {
+        "lianchuang": {
+          "pdf_sha256": "c38011d93c7ce65cc868b046fb2dd5ec595a8f44648da449cbe5fd5b44d68d7d",
+          "content_list_sha256": "e860d4944f2d314761feece5f234ea526fba5c415273ba7834ffb9aed3353daa",
+          "graph_doc_id": "cbe83291f1ef46634e5dcf0969369b3b9bbd20aefb389c0aedb8b76ce1343db5"
+        }
+      },
+      "timeout_seconds": 180,
+      "arms": [
+        "hybrid"
+      ]
+    }
+  }
+}

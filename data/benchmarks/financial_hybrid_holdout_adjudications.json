@@ -1,0 +1,10 @@
+[
+  {
+    "question_id": "muyuan-whole-group-rank-unavailable",
+    "arm": "hybrid",
+    "answer_sha256": "e0eb8126930faf4642a6b3c70fe6754c04508fa1cf8514eb661786a50ce7a8d9",
+    "answer_correct": true,
+    "citation_correct": true,
+    "note": "Correct refusal and scope; the phrase 只覆盖 is equivalent to the gold subset requirement. Physical p237 gives the scoped disclosure; p152 confirms the minority-interest materiality criterion."
+  }
+]

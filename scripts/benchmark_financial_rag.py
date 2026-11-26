@@ -133,6 +133,8 @@ def main():
             rows.append({"question_id": item["id"], "category": item["category"], "model": args.model,
                          "report": item["report"], **result})
             (out / "runs.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+            if result["status"] == "failed" and "insufficient_quota" in result["stderr"]:
+                raise SystemExit("Model quota exhausted; partial runs saved. Resume in a new output directory.")
 
 
 if __name__ == "__main__":

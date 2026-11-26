@@ -100,7 +100,28 @@ def test_comparison_prices_router_and_fallback_together(tmp_path):
              "cached_input_per_million_scenarios": [0]}
     result = compare(controls, hybrid, {"questions": [q]}, rates, trace_directory=tmp_path)
     scenario, = result["scenarios"]
-    stage = scenario["mean_hybrid_api_cost_by_stage"]
+    stage = scenario["mean_hybrid_known_cost_by_stage"]
     assert stage["router"] == stage["search_fallback"] > 0
     assert sum(stage.values()) == scenario["overall"]["hybrid"]["mean_api_cost"]
     assert result["selections"] == {"search_tools": 1}
+    hybrid[0]["unreported_usage_calls"] = 1
+    unknown = compare(controls, hybrid, {"questions": [q]}, rates, trace_directory=tmp_path)
+    assert unknown["unreported_hybrid_calls"] == 1
+    assert unknown["scenarios"][0]["overall"]["hybrid"]["mean_api_cost"] is None
+    assert unknown["scenarios"][0]["mean_hybrid_known_cost_lower_bound"] == sum(stage.values())
+
+
+def test_quota_error_does_not_retry_the_same_exhausted_model():
+    import pytest
+
+    class QuotaError(Exception):
+        code = "insufficient_quota"
+
+    def no_quota(**_):
+        raise QuotaError
+
+    def unexpected_search():
+        raise AssertionError("fallback uses the same exhausted endpoint")
+
+    with pytest.raises(RuntimeError, match="insufficient_quota"):
+        hybrid_ask("2023年营业收入？", None, 2024, no_quota, unexpected_search, lambda *_a, **_kw: None)
