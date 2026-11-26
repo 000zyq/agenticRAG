@@ -142,3 +142,38 @@ PostgreSQL query independently matched the paper table: total revenue
 9,064.12 ten-thousand yuan. Asking for six companies returns incomplete
 coverage rather than substituting an associate. The paired model evaluation
 uses `data/benchmarks/financial_graphrag_lianchuang_gold.json`.
+
+### Cold indexing and amortization replay
+
+Measure from a prepared page cache to a queryable index. Both models reuse the
+page extraction; do not include it on just one side. Cold page-faithful
+indexes on the local evaluation machine:
+
+| Report | Search Tools (BGE + Milvus) s | Typed graph (PostgreSQL) s |
+| --- | ---: | ---: |
+| Midea | 366.48 | 0.66 |
+| Muyuan | 394.02 | 3.96 |
+| Total | 760.49 | 4.62 |
+
+These wall times exclude shared PDF extraction and are not a CPU-hour or
+invoice comparison. The measured graph extractor does not call an LLM; both
+index builds spend zero billed model tokens. There is no incremental
+graph-build API cost to recover in this setup. Treat engineer time, ongoing
+schema maintenance and concurrent database/embedding infrastructure as
+separate deployment inputs.
+
+```sh
+uv run python -m scripts.price_financial_rag runs.json gold.json \
+  data/benchmarks/financial_graphrag_qwen_beijing_pricing.json
+```
+
+The price grid computes per-attempt cost, model cost divided by the number of
+joint-correct answers, and total cost at 10, 100 and 1,000 questions. Use
+`first_parity_queries_when_both_joint_correct` to describe a **matched-answer
+subset**: it is conditional on these particular questions being answered and
+cited correctly by both arms, not a service-wide guarantee. If correctness
+differs, raw per-attempt parity by itself does not justify replacing Search
+Tools. Record human adjudications with `--reviews` (question ID, arm, boolean
+answer/citation grades, answer SHA-256 and reason); the original regex outcome
+is retained alongside each override. Failed or unpriced runs are never treated
+as free requests.

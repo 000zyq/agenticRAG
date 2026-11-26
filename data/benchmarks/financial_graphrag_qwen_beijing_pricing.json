@@ -1,0 +1,13 @@
+{
+  "currency": "CNY",
+  "model": "qwen3.8-max-0902",
+  "region": "cn-beijing",
+  "published_list_price_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+  "cache_pricing_url": "https://help.aliyun.com/zh/model-studio/context-cache",
+  "checked_on": "2026-11-26",
+  "input_per_million": 12,
+  "output_per_million": 36,
+  "cached_input_per_million_scenarios": [0, 12],
+  "incremental_offline_cost_scenarios": [0, 1, 10, 50],
+  "notes": "Cache prices and incremental costs are sensitivity scenarios, not account billing or measured infrastructure cost."
+}
