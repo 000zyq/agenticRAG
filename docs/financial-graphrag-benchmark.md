@@ -264,3 +264,30 @@ Direct PostgreSQL checks on the real Midea and Muyuan graphs returned
 ten-thousand yuan per R&D employee, with both input pages. This verifies
 tool arithmetic and provenance; it does not establish a model-level gain.
 Leave the flag off when reproducing the existing paired comparisons.
+
+### Corrected-input development replay
+
+Replayed the eight original development questions and four new scope and
+aggregation probes under the page-faithful input. The two arms used the
+same Qwen snapshot and the same frozen commits as the independent holdout.
+After adjudication, Search Tools was 12/12 joint-correct (P50 22.82 s,
+P95 84.11 s); graph was 8/12 (P50 12.84 s, P95 29.82 s). This is a
+development set, not an independent accuracy estimate. For the eight
+joint-correct pairs, the CNY 10 hypothetical incremental-cost scenario
+implies 82–113 matching-quality queries; do not mix this estimate with the
+independent holdout or the labeled route replay.
+
+- Both answers to the original Shangcai lookup now cite physical page 227.
+- Midea's development answers revealed a unit-conversion explanation error,
+  and two registration cells lost in the shared extraction on physical p266.
+  The graph incorrectly described the latter as absent from the report:
+  the paper rows explicitly show British Virgin Islands and Foshan.
+- For Muyuan's unavailable Top-5, graph declined as expected, but incorrectly
+  described the one eligible company as lacking a ranking value. The
+  subsequent graph tool returns the available count and a reason code so
+  insufficient K is distinct from missing metrics.
+
+Combine the cohort and aggregation gold manifests in order and apply
+`data/benchmarks/financial_graphrag_development_adjudications.json` to
+reproduce the reviewed grades. These adjudications do not alter the
+independent holdout grades.

@@ -1,0 +1,34 @@
+[
+  {
+    "question_id": "midea-calc-profit",
+    "arm": "graphrag",
+    "answer_sha256": "8868b0f8e036269d803c5f429fba752932992501b2c0830f07e83cc0b5114af5",
+    "answer_correct": false,
+    "citation_correct": true,
+    "note": "Final 19.42 and pp9/82 are correct, but the stated conversion 千元 ÷ 1,000 × 10=万元 is wrong by a factor of ten. The disclosed amount in 千元 should be divided by ten to obtain 万元."
+  },
+  {
+    "question_id": "midea-disclosure-count",
+    "arm": "graphrag",
+    "answer_sha256": "5bdf8311d44c8ff6b133f3bf908c069c8e9cc67e37d167c0b8660b2bb22637dc",
+    "answer_correct": false,
+    "citation_correct": false,
+    "note": "The main group-wide refusal is appropriate, but the answer claimed no Henan registrations in the entire disclosed table using a partial location extract (32 of 34 classified). It neither verified the missing rows nor cited the PDF pages."
+  },
+  {
+    "question_id": "midea-wuhu-major-count",
+    "arm": "graphrag",
+    "answer_sha256": "780dbb0e770b75824b468469683cff841a354b0ae80e755905d7090f2319e22f",
+    "answer_correct": false,
+    "citation_correct": true,
+    "note": "The six names and p265/p266 citations are correct, but the answer materializes two blank parsed cells as undisclosed registration locations. On physical p266 they are explicitly British Virgin Islands and Foshan; this was a shared parse omission."
+  },
+  {
+    "question_id": "muyuan-disclosed-top-five-unavailable",
+    "arm": "graphrag",
+    "answer_sha256": "5186b167e0e6949a02ef96bb1509cd8700d8648ee7b812fd55fe4ed0f85346e7",
+    "answer_correct": false,
+    "citation_correct": true,
+    "note": "The p237 citation and refusal are appropriate, but the answer incorrectly says the disclosed row has no comparable ranking value. The revenue metric is disclosed, and both trace responses have an empty missing/conflicting list. One comparable company is fewer than five."
+  }
+]

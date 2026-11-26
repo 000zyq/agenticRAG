@@ -30,10 +30,20 @@ def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k, scope=SUBSIDI
     evidence_pages = sorted({page for row in pages.values() for page in row})
     result = {"scope": scope, "full_group_coverage": False,
               "disclosed_company_count": len(values), "rank_metric": rank_by, "sum_metric": sum_metric,
+              "companies_with_unique_rank_value": len(eligible),
               "requested_k": top_k, "missing_or_conflicting_rank_values": missing,
               "evidence_pages": evidence_pages, "ranked": [], "rank_total": None, "aggregate": None}
-    if not rows or missing or len(currencies) != 1 or len(selected) < top_k:
-        return {**result, "status": "insufficient_comparable_disclosure"}
+    reasons = []
+    if not rows:
+        reasons.append("no_disclosed_companies")
+    if missing:
+        reasons.append("missing_or_conflicting_rank_values")
+    if len(currencies) > 1:
+        reasons.append("mixed_currencies")
+    if len(selected) < top_k:
+        reasons.append("fewer_companies_with_values_than_requested")
+    if reasons:
+        return {**result, "status": "insufficient_comparable_disclosure", "reasons": reasons}
     if len(eligible) > top_k and selected[-1][2] == eligible[top_k][2]:
         return {**result, "status": "tie_at_cutoff"}
     ranked = []

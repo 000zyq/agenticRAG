@@ -66,7 +66,9 @@ def test_rank_selects_by_revenue_sums_same_companies_and_refuses_incomplete_rank
     assert result["rank_total"] == "300000"
     assert result["ranked"][0]["company"] == "甲" and not result["full_group_coverage"]
     assert rank_disclosure(data, evidence, top_k=2, **args)["aggregate"] == "48"
-    assert rank_disclosure(data, evidence, top_k=3, **args)["aggregate"] is None
+    too_few = rank_disclosure(data, evidence, top_k=3, **args)
+    assert too_few["aggregate"] is None and too_few["companies_with_unique_rank_value"] == 2
+    assert too_few["reasons"] == ["fewer_companies_with_values_than_requested"]
     assert rank_disclosure(data[1:], evidence, top_k=1, **args)["status"] == "insufficient_comparable_disclosure"
     tied = {**data[2][3], "value": "30"}
     data[2] = (*data[2][:3], tied)
