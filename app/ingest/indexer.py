@@ -12,6 +12,8 @@ from app.config import get_settings
 from app.ingest.embedding_client import embed_texts
 from app.ingest.parser_pdf import parse_pdf
 from app.ingest.parser_docx import parse_docx
+from app.graph.builder import EXTRACTOR_VERSION
+from app.graph.repository import create_graph_build_run, mark_document_graph_status, replace_document_chunks
 from app.retrieval.milvus_client import insert_chunks, flush_collection
 from app.storage.repository import upsert_document, get_document_by_hash, mark_document_status
 
@@ -61,11 +63,12 @@ def index_directory(path: str) -> dict:
             if existing:
                 _LOGGER.info("Reindexing file with previous status=%s: %s", existing.get("status"), file_path)
 
-            upsert_document(doc_id, str(file_path), file_hash, "processing", 0)
+            upsert_document(doc_id, str(file_path), file_hash, "processing", 0, graph_status="processing")
 
             chunks = _extract_chunks(file_path)
             if not chunks:
                 mark_document_status(doc_id, "empty")
+                mark_document_graph_status(doc_id, "empty")
                 _LOGGER.info("No chunks extracted: %s", file_path)
                 continue
 
@@ -73,6 +76,7 @@ def index_directory(path: str) -> dict:
                 chunk["doc_id"] = doc_id
                 chunk["source_path"] = str(file_path)
 
+            replace_document_chunks(doc_id, chunks)
             _LOGGER.info("Extracted %d chunks. Embedding...", len(chunks))
             embed_start = time.perf_counter()
             embeddings = embed_texts([c["text"] for c in chunks])
@@ -98,6 +102,8 @@ def index_directory(path: str) -> dict:
                 )
             flush_collection()
             upsert_document(doc_id, str(file_path), file_hash, "indexed", len(chunks))
+            mark_document_graph_status(doc_id, "pending")
+            create_graph_build_run(doc_id, EXTRACTOR_VERSION, status="pending")
             indexed += 1
             _LOGGER.info(
                 "Indexed %s in %.2fs",
@@ -108,6 +114,7 @@ def index_directory(path: str) -> dict:
             errors.append(f"{file_path}: {exc}")
             if doc_id:
                 mark_document_status(doc_id, "failed")
+                mark_document_graph_status(doc_id, "failed")
             _LOGGER.exception("Failed indexing %s", file_path)
 
     return {"indexed": indexed, "skipped": skipped, "errors": errors}
@@ -127,14 +134,21 @@ def _extract_chunks(file_path: Path) -> list[dict]:
 
 def _chunks_from_parts(parts: list[dict], page_key: str) -> list[dict]:
     chunks: list[dict] = []
-    for part in parts:
+    chunk_order = 0
+    for part_index, part in enumerate(parts):
         text = part.get("text", "")
+        source_position = int(part.get(page_key, 0))
         for idx, chunk in enumerate(chunk_text(text)):
             chunks.append(
                 {
                     "text": chunk,
-                    "page": int(part.get(page_key, 0)),
+                    "page": source_position if page_key == "page" else 0,
                     "chunk_index": idx,
+                    "chunk_order": chunk_order,
+                    "source_kind": page_key,
+                    "source_position": source_position,
+                    "part_index": part_index,
                 }
             )
+            chunk_order += 1
     return chunks

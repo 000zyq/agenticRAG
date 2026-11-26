@@ -1,28 +1,51 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Iterable
 
 from app.storage.db import get_conn
 
 
-def upsert_document(doc_id: str, path: str, file_hash: str, status: str, num_chunks: int) -> None:
+def upsert_document(
+    doc_id: str,
+    path: str,
+    file_hash: str,
+    status: str,
+    num_chunks: int,
+    graph_status: str | None = None,
+) -> None:
     now = dt.datetime.utcnow()
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO documents (doc_id, path, hash, status, num_chunks, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (doc_id) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    hash = EXCLUDED.hash,
-                    status = EXCLUDED.status,
-                    num_chunks = EXCLUDED.num_chunks,
-                    updated_at = EXCLUDED.updated_at
-                """,
-                (doc_id, path, file_hash, status, num_chunks, now),
-            )
+            if graph_status is None:
+                cur.execute(
+                    """
+                    INSERT INTO documents (doc_id, path, hash, status, num_chunks, graph_status, graph_updated_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (doc_id) DO UPDATE SET
+                        path = EXCLUDED.path,
+                        hash = EXCLUDED.hash,
+                        status = EXCLUDED.status,
+                        num_chunks = EXCLUDED.num_chunks,
+                        updated_at = EXCLUDED.updated_at
+                    """,
+                    (doc_id, path, file_hash, status, num_chunks, "not_requested", None, now),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO documents (doc_id, path, hash, status, num_chunks, graph_status, graph_updated_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (doc_id) DO UPDATE SET
+                        path = EXCLUDED.path,
+                        hash = EXCLUDED.hash,
+                        status = EXCLUDED.status,
+                        num_chunks = EXCLUDED.num_chunks,
+                        graph_status = EXCLUDED.graph_status,
+                        graph_updated_at = EXCLUDED.graph_updated_at,
+                        updated_at = EXCLUDED.updated_at
+                    """,
+                    (doc_id, path, file_hash, status, num_chunks, graph_status, now, now),
+                )
         conn.commit()
 
 
@@ -40,7 +63,10 @@ def mark_document_status(doc_id: str, status: str) -> None:
 def get_document_by_hash(file_hash: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT doc_id, path, hash, status, num_chunks FROM documents WHERE hash = %s", (file_hash,))
+            cur.execute(
+                "SELECT doc_id, path, hash, status, num_chunks, graph_status FROM documents WHERE hash = %s",
+                (file_hash,),
+            )
             row = cur.fetchone()
             if not row:
                 return None
@@ -50,6 +76,7 @@ def get_document_by_hash(file_hash: str):
                 "hash": row[2],
                 "status": row[3],
                 "num_chunks": row[4],
+                "graph_status": row[5],
             }
 
 
@@ -117,4 +144,3 @@ def upsert_finqa_qa(qa_id: str, doc_id: str, question: str, answer: str | None, 
                 (qa_id, doc_id, question, answer, raw_json, now),
             )
         conn.commit()
-

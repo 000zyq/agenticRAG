@@ -36,6 +36,12 @@ class Settings(BaseModel):
     retrieval_top_n: int = Field(20, alias="RETRIEVAL_TOP_N")
     retrieval_top_k: int = Field(5, alias="RETRIEVAL_TOP_K")
 
+    graph_extraction_model: str = Field("gpt-4.1-mini", alias="GRAPH_EXTRACTION_MODEL")
+    graph_extraction_max_chars: int = Field(4000, alias="GRAPH_EXTRACTION_MAX_CHARS")
+    graph_relation_hop_window: int = Field(2, alias="GRAPH_RELATION_HOP_WINDOW")
+    graph_aggregate_min_confidence: float = Field(0.55, alias="GRAPH_AGGREGATE_MIN_CONFIDENCE")
+    graph_query_default_limit: int = Field(20, alias="GRAPH_QUERY_DEFAULT_LIMIT")
+
     host: str = Field("0.0.0.0", alias="HOST")
     port: int = Field(8000, alias="PORT")
 

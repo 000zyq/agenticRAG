@@ -8,6 +8,7 @@ from app.api.index import router as index_router
 from app.api.chat import router as chat_router
 from app.api.agui import router as agui_router
 from app.api.fact_review import router as fact_review_router
+from app.api.graph import router as graph_router
 
 app = FastAPI(title="Agentic RAG")
 
@@ -29,5 +30,6 @@ app.include_router(index_router)
 app.include_router(chat_router)
 app.include_router(agui_router)
 app.include_router(fact_review_router)
+app.include_router(graph_router)
 
 app.mount("/ui", StaticFiles(directory="ui", html=True), name="ui")
