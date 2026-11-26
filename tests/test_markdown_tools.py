@@ -1,7 +1,10 @@
 from io import StringIO
 import json
+from shutil import which
 from threading import Barrier
 from types import SimpleNamespace
+
+import pytest
 
 from scripts.chat_markdown import MarkdownTools, ask
 
@@ -90,3 +93,32 @@ def test_third_model_round_can_only_answer():
     assert ask("营收在哪一页？", MarkdownTools([(5, "营收")], None), complete, trace=trace) == "营收见第 5 页。"
     assert offered_tools == [None, None, "none"]
     assert json.loads(trace.getvalue().splitlines()[-1])["turn"] == 3
+
+
+@pytest.mark.skipif(which("rg") is None, reason="ripgrep not installed")
+def test_grep_returns_table_value_and_page_local_context():
+    tools = MarkdownTools([
+        (9, "# 财务指标\n<table><tr><td>指标</td><td>2024</td></tr>"
+            "<tr><td>归母净利润</td><td>38,537,237</td></tr></table>"),
+        (10, "下一页"),
+    ], None)
+    result = tools.structure.grep(["归母净利润", "未披露"], "literal", 1)
+    hit, = result["matches"]
+    assert (hit["page"], hit["text"], hit["before"]) == (9, "归母净利润 | 38,537,237", ["指标 | 2024"])
+    assert "下一页" not in hit["after"]
+    regex_hit, = tools.structure.grep([r"归母.*38,537,237"], "regex", 0)["matches"]
+    assert regex_hit["text"] == hit["text"]
+
+    def complete(messages, tools):
+        assert any(tool["function"]["name"] == "grep" for tool in tools)
+        if messages[-1]["role"] == "tool":
+            assert "38,537,237" in messages[-1]["content"]
+            msg = SimpleNamespace(tool_calls=[], content="见第 9 页。")
+        else:
+            function = SimpleNamespace(name="grep", arguments=json.dumps(
+                {"patterns": ["归母净利润"], "mode": "literal", "context": 0}))
+            msg = SimpleNamespace(tool_calls=[SimpleNamespace(id="grep", function=function)],
+                                  model_dump=lambda **_: {"role": "assistant"})
+        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+    assert ask("归母净利润是多少？", tools, complete) == "见第 9 页。"

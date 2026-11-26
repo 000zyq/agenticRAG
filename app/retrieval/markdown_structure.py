@@ -1,7 +1,9 @@
 """Literal and structural lookup over page-preserving Markdown."""
 from collections import defaultdict
 from html import unescape
+import json
 import re
+import subprocess
 import unicodedata
 
 
@@ -17,6 +19,17 @@ def normalize(text):
     return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
 
 
+def table_row_text(row):
+    return unescape(re.sub(r"<[^>]+>", "", CELL.sub(" | ", row)))
+
+
+def grep_lines(markdown):
+    def replace_table(match):
+        return "\n" + "\n".join(" ".join(table_row_text(row).split()) for row in ROW.findall(match[1])) + "\n"
+
+    return TABLE.sub(replace_table, markdown).splitlines()
+
+
 def table_headers(markdown):
     for table in TABLE.findall(markdown):
         rows = ROW.findall(table)
@@ -26,7 +39,7 @@ def table_headers(markdown):
                 if not re.search(r"<th\b", row, re.IGNORECASE):
                     break
                 header.append(row)
-            yield " | ".join(unescape(re.sub(r"<[^>]+>", "", CELL.sub(" | ", row))) for row in header)
+            yield " | ".join(table_row_text(row) for row in header)
     lines = markdown.splitlines()
     for line, rule in zip(lines, lines[1:]):
         if "|" in line and PIPE_RULE.fullmatch(rule):
@@ -38,6 +51,7 @@ class MarkdownStructure:
         self.targets = defaultdict(list)
         self.passages = passages
         self.page_passages = defaultdict(list)
+        self.grep_pages = [(page, grep_lines(text)) for page, text in pages]
         for index, (page, passage) in enumerate(passages):
             self.page_passages[page].append((index, normalize(passage)))
         starts = {}
@@ -74,6 +88,53 @@ class MarkdownStructure:
             hits.append(hit)
         hits.sort(key=lambda hit: -len(hit["matched"]))
         return {"hits": len(hits), "matches": hits[:15]}
+
+    def grep(self, patterns, mode, context):
+        if mode not in {"literal", "regex"} or type(context) is not int or not 0 <= context <= 2:
+            raise ValueError("Use literal or regex mode and 0 to 2 context lines")
+        if not isinstance(patterns, list) or not 1 <= len(patterns) <= 12 or any(
+            not isinstance(pattern, str) or not pattern.strip() or len(pattern) > 200
+            or any(char in pattern for char in ("\n", "\r", "\0")) for pattern in patterns
+        ):
+            raise ValueError("Supply 1 to 12 nonempty, single-line patterns up to 200 characters")
+
+        lines = [(page, page_lines, i) for page, page_lines in self.grep_pages
+                 for i in range(len(page_lines))]
+        command = ["rg", "--no-config", "--json", "--ignore-case", "--max-count", "21"]
+        if mode == "literal":
+            command.append("--fixed-strings")
+        for pattern in patterns:
+            command.extend(["-e", pattern])
+        try:
+            result = subprocess.run(
+                [*command, "--", "-"], input="\n".join(page_lines[i] for _, page_lines, i in lines),
+                capture_output=True, encoding="utf-8", timeout=5, check=False,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError("The grep tool requires ripgrep (rg)") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("Markdown grep exceeded its time limit") from exc
+        if result.returncode not in {0, 1}:
+            raise ValueError(result.stderr.strip()[:500] or "Markdown grep failed")
+
+        matches = []
+        for event in map(json.loads, result.stdout.splitlines()):
+            if event["type"] != "match":
+                continue
+            data = event["data"]
+            page, page_lines, index = lines[data["line_number"] - 1]
+            match = data["submatches"][0]
+            encoded_line = page_lines[index].encode("utf-8")
+            start, end = match["start"], match["end"]
+            snippet = encoded_line[max(0, start - 240):max(start + 480, end + 360)].decode("utf-8", errors="ignore")
+            reference = self._reference(page, None, [normalize(match["match"]["text"])])
+            matches.append({
+                "page": page, "passage": reference["passage"], "line": index + 1,
+                "text": snippet[:800],
+                "before": [s[:240] for s in page_lines[max(0, index - context):index]],
+                "after": [s[:240] for s in page_lines[index + 1:index + 1 + context]],
+            })
+        return {"matches": matches[:20], "truncated": len(matches) > 20}
 
     def _reference(self, page, label, needles):
         candidates = self.page_passages[page]

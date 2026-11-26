@@ -99,6 +99,11 @@ with `any` and `all` matching. Recognized continuation headings link back to
 an earlier matching heading. Search and evidence tools return PDF page numbers
 when the input is a page-preserving PDF conversion.
 
+The `grep` tool requires ripgrep (`rg`) on PATH. It accepts up to 12 literal
+strings or regex patterns and returns up to 20 matching lines with page references
+and optional adjacent lines. HTML tables are searched as readable rows containing
+both the labels and the values.
+
 With the configured Milvus and embedding service running, build the index once
 and use it for subsequent questions:
 

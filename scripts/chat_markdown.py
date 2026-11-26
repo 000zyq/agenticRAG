@@ -30,6 +30,12 @@ TOOLS = [
     tool("fuse", "Fuse ranked lists by reciprocal rank.", {
         "lists": {"type": "array", "items": STRING}}),
     tool("read", "Read a passage and its page reference.", {"passage": {"type": "integer"}}),
+    tool("grep", "Search Markdown lines and table rows for any of several patterns. "
+         "Returns matching lines with values, page references and optional surrounding lines.", {
+        "patterns": {"type": "array", "items": STRING},
+        "mode": {"type": "string", "enum": ["literal", "regex"]},
+        "context": {"type": "integer", "minimum": 0, "maximum": 2},
+    }),
     tool("locate", "Find multiple literal phrases in report text, headings or table headers. "
          "Use all to require co-occurrence in the same page, heading or header.", {
         "phrases": {"type": "array", "items": STRING},
@@ -123,7 +129,8 @@ def ask(question, corpus, complete, *, trace=None):
         "and the missing evidence. Stop there. "
         "You have at most two tool rounds, then one answer-only round. "
         "Batch independent searches and relevant query rewrites in the first round. "
-        "Use locate for exact names, headings and table headers. Use the second round for the "
+        "Use grep for exact metric labels or regex and to get matching table rows with values. "
+        "Use locate for headings and table headers. Use the second round for the "
         "highest-value evidence reads, including relevant continuation pages. For derived metrics, "
         "search for the numerator and denominator in the first round, then read both sources. "
         "Name the formula and denominator convention. If a term is ambiguous, label each "
@@ -137,6 +144,7 @@ def ask(question, corpus, complete, *, trace=None):
         {"role": "user", "content": question}]
     dispatch = {"search": corpus.search, "fuse": corpus.fuse, "read": corpus.read}
     dispatch["locate"] = corpus.locate
+    dispatch["grep"] = corpus.structure.grep
     for turn in range(1, MAX_MODEL_ROUNDS + 1):
         started = perf_counter()
         tool_kwargs = {"tools": TOOLS}
