@@ -1,0 +1,50 @@
+[
+  {
+    "question_id": "midea-holding-status-longtail",
+    "arm": "graphrag",
+    "answer_sha256": "9b1dd2c63c1787918dab2d26ff22848bb26396f5648cdb9fe3c43b9f1375ee5b",
+    "answer_correct": false,
+    "citation_correct": false,
+    "note": "The graph abstains. PDF p266 does disclose the 74% stake in the indirect column; the cited location does not support the requested holding claim."
+  },
+  {
+    "question_id": "midea-cashflow-longtail",
+    "arm": "graphrag",
+    "answer_sha256": "ca52263057abda4718d3cbc8ed692955e26ce3ffa31b14a2db6d721483218587",
+    "answer_correct": false,
+    "citation_correct": false,
+    "note": "Graph scope does not include cash flow. This is an index coverage miss; the report contains the requested amount on pp9 and 53."
+  },
+  {
+    "question_id": "muyuan-capitalized-rd-longtail",
+    "arm": "graphrag",
+    "answer_sha256": "ad063f4481d9d7e87de1615fc4d3eaf94e57312d138c4118f31f03eae53948f9",
+    "answer_correct": false,
+    "citation_correct": false,
+    "note": "The graph mistakes a projection of the table for the whole table. PDF p29 does disclose the 0.00% capitalization share."
+  },
+  {
+    "question_id": "midea-parent-staff-longtail",
+    "arm": "graphrag",
+    "answer_sha256": "3a23050db19f77fbad051b0d92c3b5420427de99d77ebe548284e495369b2000",
+    "answer_correct": false,
+    "citation_correct": false,
+    "note": "The answer only retrieves the combined employee count. PDF p82 separately discloses 947 parent-company employees."
+  },
+  {
+    "question_id": "muyuan-whole-group-rank-unavailable",
+    "arm": "graphrag",
+    "answer_sha256": "32db095522c3b7ef9b9bb5e8596b4222dd13c0ee34b935e12dd859f012dd51d5",
+    "answer_correct": false,
+    "citation_correct": true,
+    "note": "The refusal and p237 scope citation are correct, but the answer materially asserts without evidence that most consolidated group profit necessarily came from unlisted subsidiaries. Group parent-attributable and subsidiary net profits cannot support that inference."
+  },
+  {
+    "question_id": "muyuan-whole-group-rank-unavailable",
+    "arm": "search_tools",
+    "answer_sha256": "8913700141aed01d9ae72b64fa9380c1e606d1f9d755e17a25c669a02e61d1a5",
+    "answer_correct": true,
+    "citation_correct": true,
+    "note": "Correct scope denial: the text says 只覆盖 important non-wholly-owned subsidiaries, equivalent to the gold subset condition. Physical p237 discloses one row; p224 begins the entity roster, not a profit table."
+  }
+]

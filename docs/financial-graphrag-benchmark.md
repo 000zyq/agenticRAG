@@ -177,3 +177,48 @@ Tools. Record human adjudications with `--reviews` (question ID, arm, boolean
 answer/citation grades, answer SHA-256 and reason); the original regex outcome
 is retained alongside each override. Failed or unpriced runs are never treated
 as free requests.
+
+### Independent MinerU holdout: reviewed results
+
+Twelve previously unseen questions on the two page-faithful reports, with
+the frozen Search Tools commit `c024721` and graph commit `9ae0154`. Both
+arms used `qwen3.8-max-0902`, warm indexes, and the same tool-round cap.
+
+| Question type | Search Tools joint correct | GraphRAG joint correct | Search / graph P50 s |
+| --- | ---: | ---: | ---: |
+| Direct typed facts | 3/3 | 3/3 | 18.53 / 12.86 |
+| Cross-page arithmetic | 2/2 | 2/2 | 27.78 / 16.17 |
+| Entity location | 1/1 | 1/1 | 12.81 / 8.09 |
+| Scoped financial rank | 1/1 | 1/1 | 18.34 / 10.79 |
+| Outside the graph schema | 4/4 | 0/4 | 20.36 / 17.46 |
+| Incomplete disclosure | 1/1 | 0/1 | 51.02 / 51.39 |
+| **Total** | **12/12** | **7/12** | **19.05 / 13.90** |
+
+Overall P95 was 51.02 s versus 51.39 s; at this sample size the
+nearest-rank P95 is the maximum. The faster median does not mean a faster
+tail. The paired median speedup was 1.27x. Median time in model calls was
+17.84 s versus 13.22 s; most of the end-to-end median difference is consistent
+with faster model turns, not simply database versus vector lookup.
+
+The graph missed the indirect stake, operating cash flow, capitalized R&D
+share and parent-only staff count. These facts are disclosed in the PDFs;
+they were not in the selected graph schema. On the incomplete-disclosure
+question, the graph correctly said a group-wide rank was not identifiable but
+then made a material unsupported inference about where most consolidated
+profit came from. This was scored wrong. Search used an equivalent coverage
+phrase the regex missed; manual review accepted it. The hash-bound
+adjudications are in `data/benchmarks/financial_graphrag_holdout_adjudications.json`.
+
+| Model cost, CNY | Search Tools | GraphRAG |
+| --- | ---: | ---: |
+| Per attempted question | 0.1029–0.1658 | 0.0404–0.0673 |
+| Per joint-correct answer | 0.1029–0.1658 | 0.0693–0.1154 |
+
+Raw attempt costs would offset a hypothetical RMB 10 incremental build
+expense after 102–161 attempts, but this trades away coverage. On the seven
+questions correct in both arms, mean savings were RMB 0.0532–0.0936, implying
+107–189 **matching-quality queries** for the same hypothetical expense.
+The latter is a conditional sample estimate: it is not a guarantee that a
+runtime router can select only winning cases. The data supports graph-first
+evaluation for well-covered typed questions, not replacing Search Tools for
+the full workload.
