@@ -16,12 +16,16 @@ RANK_METRICS = {SUBSIDIARY_SCOPE: {"revenue", "net_profit"}, MAJOR_SUBSIDIARY_SC
 def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k, scope=SUBSIDIARY_SCOPE):
     values = defaultdict(lambda: defaultdict(set))
     pages = defaultdict(set)
+    metric_pages = defaultdict(lambda: defaultdict(set))
     for name, membership_id, fact_id, fact in rows:
         company = values[name]
         for relation_id in (membership_id, fact_id):
             pages[name].update(item["page"] for item in evidence.get(relation_id, []) if item["page"] is not None)
         if fact:
             company[fact["metric"]].add((fact["currency"], Decimal(fact["value"]) * UNIT_SCALE[fact["unit"]]))
+            metric_pages[name][fact["metric"]].update(
+                item["page"] for item in evidence.get(fact_id, [])
+                if item["page"] is not None and item["evidence_text"])
     missing = sorted(name for name, facts in values.items() if len(facts[rank_by]) != 1)
     eligible = [(name, *next(iter(facts[rank_by]))) for name, facts in values.items() if len(facts[rank_by]) == 1]
     currencies = {currency for _, currency, _ in eligible}
@@ -52,6 +56,8 @@ def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k, scope=SUBSIDI
         sum_value = next(iter(sum_values))[1] if len(sum_values) == 1 and next(iter(sum_values))[0] == currency else None
         ranked.append({"company": name, "rank_value": str(amount),
                        "sum_value": str(sum_value) if sum_value is not None else None,
+                       "rank_metric_pages": sorted(metric_pages[name][rank_by]),
+                       "sum_metric_pages": sorted(metric_pages[name][sum_metric]),
                        "evidence_pages": sorted(pages[name])})
     complete = all(row["sum_value"] is not None for row in ranked)
     return {**result, "status": "ok" if complete else "missing_or_conflicting_sum_values",
@@ -183,11 +189,13 @@ class FinancialGraph:
         for entity_id, owned_id, company, loc_id, place in rows:
             if terms and (not place or not any(term in place.casefold() for term in terms)):
                 continue
-            hit = matching.setdefault(entity_id, {"company": company, "locations": set(), "relations": set()})
+            hit = matching.setdefault(entity_id, {"company": company, "locations": set(), "relations": set(),
+                                                  "location_relations": set()})
             hit["relations"].add(owned_id)
             if loc_id is not None:
                 hit["locations"].add(place)
                 hit["relations"].add(loc_id)
+                hit["location_relations"].add(loc_id)
         preview = list(matching.values())[:20]
         evidence = _load_evidence_map(sorted({r for hit in matching.values() for r in hit["relations"]}))
         return {
@@ -199,6 +207,9 @@ class FinancialGraph:
             "evidence_pages": sorted({row["page"] for rows in evidence.values() for row in rows
                                       if row["page"] is not None}),
             "matches": [{"company": hit["company"], "locations": sorted(hit["locations"]),
+                         "location_evidence_pages": sorted({row["page"] for r in hit["location_relations"]
+                                                            for row in evidence.get(r, [])
+                                                            if row["page"] is not None and row["evidence_text"]}),
                          "evidence_pages": sorted({row["page"] for r in hit["relations"]
                                                    for row in evidence.get(r, []) if row["page"] is not None})}
                         for hit in preview],

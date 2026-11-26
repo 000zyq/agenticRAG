@@ -50,11 +50,14 @@ def trace_metrics(path):
     }
 
 
-def run_arm(arm, question, source, doc_id, baseline, project, env, out, timeout):
+def run_arm(arm, question, source, doc_id, baseline, project, env, out, timeout, report_year=None):
     trace = out.with_suffix(".trace.jsonl")
     module = "scripts.chat_markdown" if arm == "search_tools" else "scripts.chat_financial_graph"
     args = ([str(source), question, "--engine", "mineru", "--backend", "milvus"] if arm == "search_tools"
             else [doc_id, question])
+    if arm == "hybrid":
+        module = "scripts.chat_financial_hybrid"
+        args = [str(source), doc_id, question, "--baseline", str(baseline), "--report-year", str(report_year)]
     started = perf_counter()
     try:
         response = subprocess.run(
@@ -67,6 +70,12 @@ def run_arm(arm, question, source, doc_id, baseline, project, env, out, timeout)
     except subprocess.TimeoutExpired:
         result = {"status": "timeout", "answer": "", "stderr": "question exceeded deadline"}
     result.update(arm=arm, elapsed_seconds=perf_counter() - started, trace=trace.name, **trace_metrics(trace))
+    if arm == "hybrid" and trace.exists():
+        events = [json.loads(line) for line in trace.read_text().splitlines() if line.strip()]
+        result["routing"] = next((row for row in events if row["event"] == "route"), None)
+        result["fallback_ms"] = next((row["duration_ms"] for row in events
+                                      if row["event"] == "fallback_duration"), None)
+        result["unreported_usage_calls"] += sum(row["event"] == "unreported_route_call" for row in events)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
@@ -80,6 +89,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", default=MODELS[0], choices=MODELS)
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--hybrid-only", action="store_true")
     args = parser.parse_args()
     if not git(args.baseline, "rev-parse", "HEAD").startswith(BASELINE) or git(
         args.baseline, "status", "--porcelain", "--untracked-files=no"
@@ -93,6 +103,8 @@ def main():
     project = Path(__file__).resolve().parents[1]
     freeze = {}
     for name, report in reports.items():
+        if args.hybrid_only and type(report.get("report_year")) is not int:
+            parser.error(f"Hybrid requires report_year metadata for {name}")
         pdf = (args.manifest.parent / report["path"]).resolve()
         candidates = sorted((args.mineru_output / pdf.stem).rglob("*_content_list.json"))
         if len(candidates) != 1:
@@ -106,16 +118,18 @@ def main():
         "graph_commit": git(project, "rev-parse", "HEAD"),
         "graph_tracked_patch_sha256": sha256(git(project, "diff", "HEAD").encode()).hexdigest(),
         "manifest_sha256": file_digest(args.manifest), "reports": freeze, "timeout_seconds": args.timeout,
+        "arms": ["hybrid"] if args.hybrid_only else ARMS,
     }, indent=2), encoding="utf-8")
     rows = []
     for index, item in enumerate(manifest["questions"]):
         report = reports[item["report"]]
         source = (args.manifest.parent / report["path"]).resolve()
-        arms = ARMS if index % 2 == 0 else ARMS[::-1]
+        arms = ("hybrid",) if args.hybrid_only else ARMS if index % 2 == 0 else ARMS[::-1]
         for arm in arms:
             print(item["id"], arm, flush=True)
             result = run_arm(arm, item["question"], source, report["graph_doc_id"],
-                             args.baseline.resolve(), project, env, out / f"{index:03d}-{arm}.json", args.timeout)
+                             args.baseline.resolve(), project, env, out / f"{index:03d}-{arm}.json", args.timeout,
+                             report.get("report_year"))
             rows.append({"question_id": item["id"], "category": item["category"], "model": args.model,
                          "report": item["report"], **result})
             (out / "runs.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
