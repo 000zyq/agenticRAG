@@ -71,3 +71,11 @@ list-price estimates are RMB 0.1368–0.1752 and RMB 0.0480 respectively, before
 account credits. These are estimates for one question, with local resource
 cost excluded. A cohort result and offline measurements are needed for a
 break-even estimate.
+
+The eight-question development cohort uses the Midea and Muyuan 2024 reports.
+On the original Muyuan PDF, the Shangcai entity's registration row is on
+physical page 227. The shared MinerU content list merges the table into page
+224. Grade against the physical PDF. The same cache's middle JSON retains the
+unmerged table in page 227's `preproc_blocks`, which can support a later
+provenance correction. Keep results for the frozen input separate from any
+rerun with corrected input.

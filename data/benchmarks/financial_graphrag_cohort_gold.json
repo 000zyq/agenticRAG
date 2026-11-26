@@ -131,10 +131,11 @@
       ],
       "evidence": [
         [
-          "第\\s*224\\s*页",
-          "\\bp\\.?\\s*224\\b"
+          "第\\s*227\\s*页",
+          "\\bp\\.?\\s*227\\b"
         ]
-      ]
+      ],
+      "evidence_note": "Physical PDF page 227; shared MinerU cache attaches this merged table to PDF page 224."
     },
     {
       "id": "midea-disclosure-count",
