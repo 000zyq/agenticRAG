@@ -29,7 +29,8 @@ def graph_ask(question, doc_id, complete, *, trace=None):
             "company_names": {"type": "array", "items": STRING},
             "location_basis": {"type": "string", "enum": ["registered_in", "operates_in"]},
         }),
-        tool("rank_subsidiaries", "Rank annual revenue or profit and sum one metric over the same companies. "
+        tool("rank_subsidiaries", "Rank annual revenue or profit, return rank_total and the sum of the requested "
+             "sum_metric over exactly the same companies. "
              "material_non_wholly_owned = 重要非全资子公司主要财务信息 (net_profit); "
              "major_subsidiaries = 主要子公司、参股子公司情况中的子公司 (parent_net_profit, excludes associates). "
              "Each supports revenue. Neither is all group subsidiaries.", {

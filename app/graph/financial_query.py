@@ -29,7 +29,7 @@ def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k, scope=SUBSIDI
     result = {"scope": scope, "full_group_coverage": False,
               "disclosed_company_count": len(values), "rank_metric": rank_by, "sum_metric": sum_metric,
               "requested_k": top_k, "missing_or_conflicting_rank_values": missing,
-              "evidence_pages": evidence_pages, "ranked": [], "aggregate": None}
+              "evidence_pages": evidence_pages, "ranked": [], "rank_total": None, "aggregate": None}
     if not rows or missing or len(currencies) != 1 or len(selected) < top_k:
         return {**result, "status": "insufficient_comparable_disclosure"}
     if len(eligible) > top_k and selected[-1][2] == eligible[top_k][2]:
@@ -44,6 +44,7 @@ def rank_disclosure(rows, evidence, *, rank_by, sum_metric, top_k, scope=SUBSIDI
     complete = all(row["sum_value"] is not None for row in ranked)
     return {**result, "status": "ok" if complete else "missing_or_conflicting_sum_values",
             "ranked": ranked, "currency": selected[0][1], "unit": "元",
+            "rank_total": str(sum(amount for _, _, amount in selected)),
             "aggregate": str(sum(Decimal(row["sum_value"]) for row in ranked)) if complete else None}
 
 

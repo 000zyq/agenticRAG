@@ -62,6 +62,7 @@ def test_rank_selects_by_revenue_sums_same_companies_and_refuses_incomplete_rank
     args = {"rank_by": "revenue", "sum_metric": "net_profit"}
     result = rank_disclosure(data, evidence, top_k=1, **args)
     assert result["status"] == "ok" and result["aggregate"] == "8"
+    assert result["rank_total"] == "300000"
     assert result["ranked"][0]["company"] == "甲" and not result["full_group_coverage"]
     assert rank_disclosure(data, evidence, top_k=2, **args)["aggregate"] == "48"
     assert rank_disclosure(data, evidence, top_k=3, **args)["aggregate"] is None
